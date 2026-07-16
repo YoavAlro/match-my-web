@@ -34,8 +34,8 @@ function isWebUrl(value: string | undefined): value is string {
 }
 
 async function activeTab(): Promise<chrome.tabs.Tab> {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id || !isWebUrl(tab.url)) throw new Error("Open a regular http or https page first.");
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (!tab?.id) throw new Error("Open a regular http or https page first.");
   return tab;
 }
 
@@ -55,7 +55,8 @@ async function currentContext(tab?: chrome.tabs.Tab): Promise<PageContext> {
   await ensureContent(tab.id!);
   const response = await chrome.tabs.sendMessage(tab.id!, { type: "CONTENT_GET_CONTEXT" } satisfies ExtensionMessage) as MessageResult<PageContext>;
   if (!response.ok || !response.data) throw new Error(response.error ?? "Could not inspect the current page.");
-  return { ...response.data, tabId: tab.id!, title: tab.title ?? response.data.title, url: tab.url!, origin: new URL(tab.url!).origin };
+  if (!isWebUrl(response.data.url)) throw new Error("Open a regular http or https page first.");
+  return { ...response.data, tabId: tab.id!, title: tab.title ?? response.data.title, url: response.data.url, origin: new URL(response.data.url).origin };
 }
 
 async function inspect(): Promise<PageSnapshot> {

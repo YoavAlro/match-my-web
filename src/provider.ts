@@ -42,10 +42,17 @@ async function checkedJson(response: Response): Promise<Record<string, unknown>>
 export async function generateProposal(config: ProviderConfig, request: string, snapshot: PageSnapshot, signal: AbortSignal): Promise<Proposal> {
   const userContent = `User request:\n${request.slice(0, 4000)}\n\nPermitted current-page snapshot:\n${JSON.stringify(snapshotForProvider(snapshot))}`;
 
-  if (config.provider === "openai") {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  if (config.provider === "openai" || config.provider === "azure") {
+    const isAzure = config.provider === "azure";
+    if (isAzure && !config.endpoint) throw new Error("Azure OpenAI endpoint is missing.");
+    const url = isAzure
+      ? `${config.endpoint}/openai/v1/chat/completions`
+      : "https://api.openai.com/v1/chat/completions";
+    const response = await fetch(url, {
       method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
+      headers: isAzure
+        ? { "content-type": "application/json", "api-key": config.apiKey }
+        : { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify({
         model: config.model,
         temperature: 0.1,
@@ -85,16 +92,24 @@ export async function generateProposal(config: ProviderConfig, request: string, 
 }
 
 export async function transcribeAudio(config: ProviderConfig, base64: string, mimeType: string): Promise<string> {
-  if (config.provider !== "openai") throw new Error("Voice transcription currently requires an OpenAI provider.");
+  if (config.provider !== "openai" && config.provider !== "azure") throw new Error("Voice transcription requires OpenAI or Azure OpenAI.");
   if (base64.length > 7_000_000) throw new Error("Recording is too large. Keep it under one minute.");
   const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
   const extension = mimeType.includes("mp4") ? "m4a" : "webm";
   const form = new FormData();
-  form.append("model", "whisper-1");
+  if (config.provider === "azure" && !config.transcriptionModel) {
+    throw new Error("Add an Azure voice transcription deployment in provider settings before recording.");
+  }
+  form.append("model", config.transcriptionModel || "whisper-1");
   form.append("file", new Blob([bytes], { type: mimeType }), `request.${extension}`);
-  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+  const isAzure = config.provider === "azure";
+  if (isAzure && !config.endpoint) throw new Error("Azure OpenAI endpoint is missing.");
+  const url = isAzure
+    ? `${config.endpoint}/openai/v1/audio/transcriptions?api-version=preview`
+    : "https://api.openai.com/v1/audio/transcriptions";
+  const response = await fetch(url, {
     method: "POST",
-    headers: { authorization: `Bearer ${config.apiKey}` },
+    headers: isAzure ? { "api-key": config.apiKey } : { authorization: `Bearer ${config.apiKey}` },
     body: form,
   });
   const body = await checkedJson(response);

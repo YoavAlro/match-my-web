@@ -1,9 +1,11 @@
-export type ProviderKind = "openai" | "anthropic";
+export type ProviderKind = "openai" | "anthropic" | "azure";
 
 export interface ProviderConfig {
   provider: ProviderKind;
   model: string;
   apiKey: string;
+  endpoint?: string;
+  transcriptionModel?: string;
 }
 
 export type ColorScheme = "unchanged" | "light" | "dark";

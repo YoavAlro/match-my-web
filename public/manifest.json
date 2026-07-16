@@ -3,7 +3,7 @@
   "name": "Match My Web",
   "short_name": "MatchMyWeb",
   "description": "Describe how a website should work for you. Preview, approve, and keep private visual adaptations.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minimum_chrome_version": "114",
   "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],

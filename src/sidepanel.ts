@@ -17,12 +17,46 @@ const proposalDetails = $("proposal-details");
 const previewButton = $<HTMLButtonElement>("preview");
 const saveButton = $<HTMLButtonElement>("save");
 const recordButton = $<HTMLButtonElement>("record");
+const providerSelect = $<HTMLSelectElement>("provider");
+const azureSettings = $("azure-settings");
+const endpointInput = $<HTMLInputElement>("endpoint");
+const voiceNote = $("voice-note");
 
 let snapshot: PageSnapshot | null = null;
 let activeProposal: Proposal | null = null;
 let proposalContext: PageContext | null = null;
 let recorder: MediaRecorder | null = null;
 let recordingTimer: number | null = null;
+
+function updateProviderFields(): void {
+  const isAzure = providerSelect.value === "azure";
+  azureSettings.hidden = !isAzure;
+  endpointInput.required = isAzure;
+  if (providerSelect.value === "anthropic") {
+    voiceNote.textContent = "Recording is unavailable with Anthropic. You can always type your request.";
+  } else if (isAzure) {
+    voiceNote.textContent = "Recording is optional and requires a separate Azure speech-to-text deployment name. Audio is never saved.";
+  } else {
+    voiceNote.textContent = "Recording is optional. Audio is sent to your configured OpenAI provider for transcription and is never saved.";
+  }
+}
+
+function azurePermissionOrigin(value: string): string {
+  let endpoint: URL;
+  try {
+    endpoint = new URL(value);
+  } catch {
+    throw new Error("Enter a valid Azure OpenAI endpoint before saving.");
+  }
+  const host = endpoint.hostname.toLowerCase();
+  const isAzureHost = host.endsWith(".openai.azure.com")
+    || host.endsWith(".services.ai.azure.com")
+    || host.endsWith(".cognitiveservices.azure.com");
+  if (endpoint.protocol !== "https:" || !isAzureHost || endpoint.username || endpoint.password) {
+    throw new Error("Use the HTTPS resource endpoint provided by Microsoft Azure.");
+  }
+  return `${endpoint.origin}/*`;
+}
 
 async function send<T>(message: ExtensionMessage): Promise<T> {
   const result = await chrome.runtime.sendMessage(message) as MessageResult<T>;
@@ -105,13 +139,21 @@ $("provider-form").addEventListener("submit", async (event) => {
   const form = event.currentTarget as HTMLFormElement;
   const button = form.querySelector<HTMLButtonElement>("button[type='submit']")!;
   const config: ProviderConfig = {
-    provider: $<HTMLSelectElement>("provider").value as ProviderConfig["provider"],
+    provider: providerSelect.value as ProviderConfig["provider"],
     model: $<HTMLInputElement>("model").value.trim(),
     apiKey: $<HTMLInputElement>("api-key").value.trim(),
+    ...(providerSelect.value === "azure" ? { endpoint: endpointInput.value.trim() } : {}),
+    ...($<HTMLInputElement>("transcription-model").value.trim()
+      ? { transcriptionModel: $<HTMLInputElement>("transcription-model").value.trim() }
+      : {}),
   };
-  const providerOrigin = config.provider === "openai" ? "https://api.openai.com/*" : "https://api.anthropic.com/*";
   busy(button, true, "Saving…");
   try {
+    const providerOrigin = config.provider === "openai"
+      ? "https://api.openai.com/*"
+      : config.provider === "anthropic"
+        ? "https://api.anthropic.com/*"
+        : azurePermissionOrigin(config.endpoint ?? "");
     const granted = await chrome.permissions.request({ origins: [providerOrigin] });
     if (!granted) throw new Error("Provider access was not granted. The extension cannot contact that API.");
     await send<boolean>({ type: "SAVE_PROVIDER_CONFIG", config });
@@ -259,8 +301,13 @@ prompt.addEventListener("keydown", (event) => {
 
 void send<ProviderConfig | null>({ type: "GET_PROVIDER_CONFIG" }).then((config) => {
   if (!config) return;
-  $<HTMLSelectElement>("provider").value = config.provider;
+  providerSelect.value = config.provider;
   $<HTMLInputElement>("model").value = config.model;
+  $<HTMLInputElement>("transcription-model").value = config.transcriptionModel ?? "";
+  endpointInput.value = config.endpoint ?? "";
   $<HTMLInputElement>("api-key").placeholder = "Saved locally — leave blank to keep it";
+  updateProviderFields();
 }).catch(() => undefined);
+providerSelect.addEventListener("change", updateProviderFields);
+updateProviderFields();
 void refreshContext();

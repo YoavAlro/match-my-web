@@ -32,10 +32,18 @@
           <label for="provider">Provider</label>
           <select id="provider" name="provider">
             <option value="openai">OpenAI</option>
+            <option value="azure">Azure OpenAI</option>
             <option value="anthropic">Anthropic</option>
           </select>
-          <label for="model">Model</label>
-          <input id="model" name="model" autocomplete="off" required placeholder="Enter a model available to your account" />
+          <div id="azure-settings" hidden>
+            <label for="endpoint">Azure resource endpoint</label>
+            <input id="endpoint" name="endpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://your-resource.openai.azure.com" />
+            <p class="hint">Use the endpoint shown under Keys and Endpoint in Azure—not a full chat-completions URL.</p>
+          </div>
+          <label for="model">Model or deployment name</label>
+          <input id="model" name="model" autocomplete="off" required placeholder="Enter a model or Azure deployment name" />
+          <label for="transcription-model">Voice transcription model or deployment <span class="optional">(optional)</span></label>
+          <input id="transcription-model" name="transcriptionModel" autocomplete="off" placeholder="OpenAI defaults to whisper-1" />
           <label for="api-key">API key</label>
           <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="Leave blank to keep the saved key" />
           <p class="hint">Stored only in Chrome’s local extension storage. Page data goes only to this provider after you choose Generate.</p>

@@ -51,10 +51,39 @@ export function validateProposal(input: unknown): Proposal {
 export function validateProviderConfig(input: unknown): ProviderConfig {
   if (!input || typeof input !== "object") throw new Error("Provider configuration is missing.");
   const value = input as Record<string, unknown>;
-  if (value.provider !== "openai" && value.provider !== "anthropic") throw new Error("Unsupported AI provider.");
+  if (value.provider !== "openai" && value.provider !== "anthropic" && value.provider !== "azure") throw new Error("Unsupported AI provider.");
   if (typeof value.model !== "string" || !value.model.trim() || value.model.length > 120) throw new Error("Enter a valid model name.");
   if (typeof value.apiKey !== "string" || value.apiKey.length < 8 || value.apiKey.length > 512) throw new Error("Enter a valid API key.");
-  return { provider: value.provider, model: value.model.trim(), apiKey: value.apiKey.trim() };
+  const transcriptionModel = typeof value.transcriptionModel === "string" ? value.transcriptionModel.trim().slice(0, 120) : "";
+  if (value.provider === "azure") {
+    if (typeof value.endpoint !== "string") throw new Error("Enter your Azure OpenAI resource endpoint.");
+    let endpoint: URL;
+    try {
+      endpoint = new URL(value.endpoint.trim());
+    } catch {
+      throw new Error("Enter a valid Azure OpenAI endpoint URL.");
+    }
+    const host = endpoint.hostname.toLowerCase();
+    const allowedHost = host.endsWith(".openai.azure.com")
+      || host.endsWith(".services.ai.azure.com")
+      || host.endsWith(".cognitiveservices.azure.com");
+    if (endpoint.protocol !== "https:" || !allowedHost || endpoint.username || endpoint.password) {
+      throw new Error("Use an HTTPS endpoint hosted by Microsoft Azure.");
+    }
+    return {
+      provider: "azure",
+      model: value.model.trim(),
+      apiKey: value.apiKey.trim(),
+      endpoint: endpoint.origin,
+      ...(transcriptionModel ? { transcriptionModel } : {}),
+    };
+  }
+  return {
+    provider: value.provider,
+    model: value.model.trim(),
+    apiKey: value.apiKey.trim(),
+    ...(transcriptionModel ? { transcriptionModel } : {}),
+  };
 }
 
 export function parseProviderJson(text: string): Proposal {

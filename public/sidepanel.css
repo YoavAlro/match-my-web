@@ -83,6 +83,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .proposal dt { font-weight: 700; }
 .proposal dd { margin: 0; overflow-wrap: anywhere; }
 summary { font-weight: 750; cursor: pointer; }
+.optional { color: var(--muted); font-size: 0.8rem; font-weight: 500; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 @media (prefers-color-scheme: dark) {

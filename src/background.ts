@@ -111,7 +111,8 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
     }
     case "SAVE_PROVIDER_CONFIG": {
       const existing = await getProviderConfig();
-      const merged = { ...message.config, apiKey: message.config.apiKey || existing?.apiKey || "" } as ProviderConfig;
+      const retainedKey = existing?.provider === message.config.provider ? existing.apiKey : "";
+      const merged = { ...message.config, apiKey: message.config.apiKey || retainedKey } as ProviderConfig;
       await saveProviderConfig(validateProviderConfig(merged));
       return true;
     }

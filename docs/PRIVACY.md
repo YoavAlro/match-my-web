@@ -14,7 +14,7 @@ This information is stored in Chrome's local extension storage. It is not placed
 
 ## Data sent to an AI provider
 
-Only after the user chooses **Generate preview**, Match My Web sends the user's request and a bounded snapshot of the permitted current page to the AI provider configured by that user. The snapshot may include the page title, URL origin/path, headings, landmark labels, control labels, and an excerpt of visible text. It excludes form values, password values, editable fields, and URL query parameters.
+Only after the user chooses **Generate preview**, Match My Web sends the user's request and a bounded snapshot of the permitted current page to the OpenAI, Azure OpenAI, or Anthropic endpoint configured by that user. The snapshot may include the page title, URL origin/path, headings, landmark labels, control labels, and an excerpt of visible text. It excludes form values, password values, editable fields, and URL query parameters.
 
 Optional voice recordings are held in memory, sent to the configured OpenAI account for transcription after the user stops recording, and then discarded. Audio is not saved by the extension.
 

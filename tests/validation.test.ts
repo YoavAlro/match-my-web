@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validatePatch, validateProposal } from "../src/validation";
+import { validatePatch, validateProposal, validateProviderConfig } from "../src/validation";
 
 describe("adaptation validation", () => {
   it("clamps numeric controls and normalizes enums", () => {
@@ -39,5 +39,28 @@ describe("adaptation validation", () => {
   it("accepts JSON-shaped proposals only", () => {
     expect(() => validateProposal(null)).toThrow();
     expect(validateProposal({ summary: "Larger copy", patch: { fontScale: 1.25 } }).summary).toBe("Larger copy");
+  });
+});
+
+describe("Azure provider validation", () => {
+  it("normalizes an official Azure resource endpoint to its origin", () => {
+    const config = validateProviderConfig({
+      provider: "azure",
+      model: "my-chat-deployment",
+      apiKey: "azure-key-value",
+      endpoint: "https://my-resource.openai.azure.com/openai/v1/",
+      transcriptionModel: "my-transcription-deployment",
+    });
+    expect(config.endpoint).toBe("https://my-resource.openai.azure.com");
+    expect(config.transcriptionModel).toBe("my-transcription-deployment");
+  });
+
+  it("refuses endpoints that could receive an Azure key outside Microsoft", () => {
+    expect(() => validateProviderConfig({
+      provider: "azure",
+      model: "deployment",
+      apiKey: "azure-key-value",
+      endpoint: "https://azure.example.test",
+    })).toThrow(/Microsoft Azure/);
   });
 });

@@ -104,6 +104,8 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
   switch (message.type) {
     case "GET_ACTIVE_CONTEXT":
       return currentContext();
+    case "GET_ACTIVE_TAB_ID":
+      return (await activeTab()).id;
     case "REQUEST_ACTIVE_SITE_ACCESS": {
       const tab = await activeTab();
       if (!chrome.permissions.addHostAccessRequest) {

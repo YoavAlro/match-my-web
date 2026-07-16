@@ -11,7 +11,8 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Open Match My Web"
+    "default_title": "Open Match My Web",
+    "default_popup": "popup.html"
   },
   "side_panel": {
     "default_path": "sidepanel.html"

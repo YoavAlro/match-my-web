@@ -30,7 +30,7 @@ Load `dist/` as an unpacked extension:
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select this repository's `dist` folder.
-4. Pin Match My Web, open a normal website, and activate the toolbar button.
+4. Pin Match My Web, open a normal website, click the toolbar button, and choose **Open for this page**. This deliberate click grants temporary `activeTab` access for the current page.
 
 The extension requests no site access at install time. Clicking the toolbar provides temporary `activeTab` access. Approving a profile prompts for persistent access to that single origin.
 

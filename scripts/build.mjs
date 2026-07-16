@@ -23,7 +23,8 @@ const options = {
     background: "src/background.ts",
     content: "src/content.ts",
     "main-world": "src/main-world.ts",
-    sidepanel: "src/sidepanel.ts"
+    sidepanel: "src/sidepanel.ts",
+    popup: "src/popup.ts"
   },
   bundle: true,
   format: "iife",

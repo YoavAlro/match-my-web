@@ -104,6 +104,14 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
   switch (message.type) {
     case "GET_ACTIVE_CONTEXT":
       return currentContext();
+    case "REQUEST_ACTIVE_SITE_ACCESS": {
+      const tab = await activeTab();
+      if (!chrome.permissions.addHostAccessRequest) {
+        throw new Error("Chrome could not show a site-access prompt. Click the Match My Web toolbar button once, then try Inspect again.");
+      }
+      await chrome.permissions.addHostAccessRequest({ tabId: tab.id! });
+      return true;
+    }
     case "INSPECT_ACTIVE_PAGE":
       return inspect();
     case "GET_PROVIDER_CONFIG": {

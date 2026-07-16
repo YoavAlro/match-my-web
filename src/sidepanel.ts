@@ -119,11 +119,22 @@ async function refreshContext(): Promise<void> {
   }
 }
 
+async function inspectWithAccessPrompt(): Promise<PageSnapshot> {
+  try {
+    return await send<PageSnapshot>({ type: "INSPECT_ACTIVE_PAGE" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!/cannot access contents|permission to access|host/i.test(message)) throw error;
+    await send<boolean>({ type: "REQUEST_ACTIVE_SITE_ACCESS" });
+    throw new Error("Chrome is asking for access to this site. Choose Allow, then click Inspect this page again.");
+  }
+}
+
 $("inspect").addEventListener("click", async (event) => {
   const button = event.currentTarget as HTMLButtonElement;
   busy(button, true, "Inspecting…");
   try {
-    snapshot = await send<PageSnapshot>({ type: "INSPECT_ACTIVE_PAGE" });
+    snapshot = await inspectWithAccessPrompt();
     pageBadge.textContent = "Inspected";
     pageDetail.textContent = `${snapshot.context.title || "Untitled page"} — ${snapshot.context.origin}`;
     setStatus("Page structure is ready. Nothing has been sent to an AI provider yet.");
@@ -177,7 +188,7 @@ $("prompt-form").addEventListener("submit", async (event) => {
   const button = $<HTMLButtonElement>("generate");
   busy(button, true, "Generating…");
   try {
-    if (!snapshot) snapshot = await send<PageSnapshot>({ type: "INSPECT_ACTIVE_PAGE" });
+    if (!snapshot) snapshot = await inspectWithAccessPrompt();
     addMessage(`You: ${request}`);
     const result = await send<{ proposal: Proposal; context: PageContext }>({ type: "GENERATE_PROPOSAL", request, snapshot });
     activeProposal = result.proposal;

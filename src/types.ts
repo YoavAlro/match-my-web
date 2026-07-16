@@ -57,6 +57,7 @@ export interface SiteProfile {
 
 export type ExtensionMessage =
   | { type: "GET_ACTIVE_CONTEXT" }
+  | { type: "REQUEST_ACTIVE_SITE_ACCESS" }
   | { type: "INSPECT_ACTIVE_PAGE" }
   | { type: "GET_PROVIDER_CONFIG" }
   | { type: "SAVE_PROVIDER_CONFIG"; config: ProviderConfig }

@@ -1,0 +1,23 @@
+{
+  "name": "match-my-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privacy-first Chrome extension for conversational website adaptations.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.1",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "sharp": "^0.34.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

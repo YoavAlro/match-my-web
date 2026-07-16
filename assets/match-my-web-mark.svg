@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Match My Web logo</title>
+  <desc id="desc">A speech bubble containing three aligned adjustment bars.</desc>
+  <rect width="128" height="128" rx="28" fill="#0f172a"/>
+  <path d="M24 28h80a10 10 0 0 1 10 10v50a10 10 0 0 1-10 10H61l-23 18 5-18H24a10 10 0 0 1-10-10V38a10 10 0 0 1 10-10Z" fill="#f8fafc"/>
+  <path d="M35 49h58M35 64h58M35 79h58" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="52" cy="49" r="8" fill="#f59e0b" stroke="#0f172a" stroke-width="3"/>
+  <circle cx="78" cy="64" r="8" fill="#f59e0b" stroke="#0f172a" stroke-width="3"/>
+  <circle cx="60" cy="79" r="8" fill="#f59e0b" stroke="#0f172a" stroke-width="3"/>
+</svg>

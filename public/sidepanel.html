@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Match My Web</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <img src="icons/icon-48.png" width="40" height="40" alt="" />
+      <div>
+        <h1>Match My Web</h1>
+        <p>Your web, fitted to you.</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="card" aria-labelledby="page-heading">
+        <div class="section-heading">
+          <h2 id="page-heading">Current page</h2>
+          <span id="page-badge" class="badge">Checking…</span>
+        </div>
+        <p id="page-detail" class="muted">Open a regular web page, then choose Inspect this page.</p>
+        <button id="inspect" class="secondary" type="button">Inspect this page</button>
+      </section>
+
+      <details class="card settings">
+        <summary>AI provider and privacy</summary>
+        <form id="provider-form">
+          <label for="provider">Provider</label>
+          <select id="provider" name="provider">
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+          </select>
+          <label for="model">Model</label>
+          <input id="model" name="model" autocomplete="off" required placeholder="Enter a model available to your account" />
+          <label for="api-key">API key</label>
+          <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="Leave blank to keep the saved key" />
+          <p class="hint">Stored only in Chrome’s local extension storage. Page data goes only to this provider after you choose Generate.</p>
+          <button type="submit" class="secondary">Save provider</button>
+        </form>
+      </details>
+
+      <section class="chat" aria-labelledby="chat-heading">
+        <h2 id="chat-heading">Describe what would help</h2>
+        <div id="conversation" class="conversation" role="log" aria-live="polite" aria-relevant="additions"></div>
+        <form id="prompt-form">
+          <label for="prompt" class="sr-only">Website adaptation request</label>
+          <textarea id="prompt" rows="4" placeholder="For example: Make the text larger, reduce motion, and keep the article in a narrower column."></textarea>
+          <div class="composer-actions">
+            <button id="record" class="icon-button" type="button" aria-pressed="false">
+              <span aria-hidden="true">●</span> Record
+            </button>
+            <button id="generate" class="primary" type="submit">Generate preview</button>
+          </div>
+          <p id="voice-note" class="hint">Recording is optional. Audio is sent to your configured OpenAI provider for transcription and is never saved.</p>
+        </form>
+      </section>
+
+      <section id="proposal" class="card proposal" aria-labelledby="proposal-heading" hidden>
+        <h2 id="proposal-heading">Suggested adaptation</h2>
+        <p id="proposal-summary"></p>
+        <dl id="proposal-details"></dl>
+        <div class="button-row">
+          <button id="preview" class="primary" type="button">Preview</button>
+          <button id="save" class="primary" type="button" disabled>Approve &amp; save</button>
+          <button id="revert" class="secondary" type="button">Undo preview</button>
+        </div>
+        <p class="hint">Saving asks for ongoing access to this site only, so the profile can return after reloads and restarts.</p>
+      </section>
+    </main>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

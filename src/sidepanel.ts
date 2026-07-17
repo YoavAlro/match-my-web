@@ -120,15 +120,23 @@ async function refreshContext(): Promise<void> {
 }
 
 async function inspectWithAccessPrompt(): Promise<PageSnapshot> {
-  const tabId = await send<number>({ type: "GET_ACTIVE_TAB_ID" });
-  if (chrome.permissions.addHostAccessRequest) {
-    await chrome.permissions.addHostAccessRequest({ tabId });
-  }
   try {
     return await send<PageSnapshot>({ type: "INSPECT_ACTIVE_PAGE" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (!/cannot access contents|permission to access|host/i.test(message)) throw error;
+    const tabId = await send<number>({ type: "GET_ACTIVE_TAB_ID" });
+    if (chrome.permissions.addHostAccessRequest) {
+      try {
+        await chrome.permissions.addHostAccessRequest({ tabId });
+      } catch (permissionError) {
+        const permissionMessage = permissionError instanceof Error ? permissionError.message : "";
+        if (/already has access/i.test(permissionMessage)) {
+          return await send<PageSnapshot>({ type: "INSPECT_ACTIVE_PAGE" });
+        }
+        throw permissionError;
+      }
+    }
     throw new Error("Chrome is asking for access to this site. Choose Allow, then click Inspect this page again.");
   }
 }

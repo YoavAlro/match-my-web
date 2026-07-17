@@ -16,6 +16,7 @@ export interface AdaptationPatch {
   lineHeight: number | null;
   letterSpacingEm: number | null;
   contentMaxWidthRem: number | null;
+  headingColor: string | null;
   colorScheme: ColorScheme;
   contrast: ContrastMode;
   reduceMotion: boolean;
@@ -55,6 +56,11 @@ export interface SiteProfile {
   schemaVersion: 1;
 }
 
+export interface SiteStatus {
+  hasProfile: boolean;
+  paused: boolean;
+}
+
 export type ExtensionMessage =
   | { type: "GET_ACTIVE_CONTEXT" }
   | { type: "GET_ACTIVE_TAB_ID" }
@@ -66,11 +72,14 @@ export type ExtensionMessage =
   | { type: "APPLY_PREVIEW"; context: PageContext; proposal: Proposal }
   | { type: "REVERT_PREVIEW"; context: PageContext }
   | { type: "SAVE_PROFILE"; context: PageContext; proposal: Proposal }
+  | { type: "GET_SITE_STATUS" }
+  | { type: "SET_SITE_PAUSED"; context: PageContext; paused: boolean }
   | { type: "GET_PROFILE_FOR_URL"; url: string }
   | { type: "TRANSCRIBE_AUDIO"; base64: string; mimeType: string }
   | { type: "CONTENT_GET_CONTEXT" }
   | { type: "CONTENT_SNAPSHOT" }
   | { type: "CONTENT_APPLY"; context: PageContext; patch: AdaptationPatch; mode: "preview" | "approved" }
+  | { type: "CONTENT_CLEAR"; context: PageContext }
   | { type: "CONTENT_REVERT"; context: PageContext };
 
 export interface MessageResult<T = unknown> {
@@ -84,9 +93,10 @@ export const DEFAULT_PATCH: AdaptationPatch = {
   lineHeight: null,
   letterSpacingEm: null,
   contentMaxWidthRem: null,
+  headingColor: null,
   colorScheme: "unchanged",
   contrast: "unchanged",
   reduceMotion: false,
-  strongFocus: true,
+  strongFocus: false,
   hideSelectors: [],
 };

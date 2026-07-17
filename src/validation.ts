@@ -3,6 +3,9 @@ import type { AdaptationPatch, Proposal, ProviderConfig } from "./types";
 const FORBIDDEN_SELECTOR = /(?:url\s*\(|@import|javascript:|data:|\[[^\]]*(?:value|src|href)\s*[*^$|~]?=|:has\s*\()/i;
 const SAFE_SELECTOR = /^(?:[.#]?[a-zA-Z][\w-]*|\[[a-zA-Z][\w-]*(?:=["']?[\w -]+["']?)?\])(?:[ >+~:.#\[\]="'()\w-])*$/;
 const ESSENTIAL_SELECTOR = /(?:\[role\s*=|(?:^|[\s>+~,(])(?:html|body|main|nav|header|footer|form|dialog|button|input|textarea|select|a)(?=$|[\s>+~.#:[(]))/i;
+const SAFE_NAMED_COLORS = new Set([
+  "black", "white", "gray", "grey", "red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "navy", "teal", "maroon",
+]);
 
 export function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value)
@@ -15,6 +18,13 @@ export function sanitizeSelector(value: unknown): string | null {
   const selector = value.trim();
   if (!selector || selector.length > 160 || FORBIDDEN_SELECTOR.test(selector) || ESSENTIAL_SELECTOR.test(selector) || !SAFE_SELECTOR.test(selector)) return null;
   return selector;
+}
+
+export function sanitizeColor(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const color = value.trim().toLowerCase();
+  if (SAFE_NAMED_COLORS.has(color) || /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(color)) return color;
+  return null;
 }
 
 export function validatePatch(input: unknown): AdaptationPatch {
@@ -33,10 +43,11 @@ export function validatePatch(input: unknown): AdaptationPatch {
     lineHeight: optionalNumber(value.lineHeight, 1.1, 2.5),
     letterSpacingEm: optionalNumber(value.letterSpacingEm, 0, 0.12),
     contentMaxWidthRem: maxWidth,
+    headingColor: sanitizeColor(value.headingColor),
     colorScheme: value.colorScheme === "light" || value.colorScheme === "dark" ? value.colorScheme : "unchanged",
     contrast: value.contrast === "more" ? "more" : "unchanged",
     reduceMotion: value.reduceMotion === true,
-    strongFocus: value.strongFocus !== false,
+    strongFocus: value.strongFocus === true,
     hideSelectors: [...new Set(selectors)],
   };
 }

@@ -116,6 +116,17 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       sendResponse({ ok: true });
       return;
     }
+    if (message.type === "CONTENT_CLEAR") {
+      if (!contextMatches(message.context)) {
+        sendResponse({ ok: false, error: "This page changed before adaptations could be paused." });
+        return;
+      }
+      approvedPatch = null;
+      previewPatch = null;
+      applyPatch(null);
+      sendResponse({ ok: true });
+      return;
+    }
     if (message.type === "CONTENT_REVERT") {
       if (!contextMatches(message.context)) {
         sendResponse({ ok: false, error: "This page changed before the preview could be undone." });

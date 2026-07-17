@@ -10,6 +10,7 @@ Return JSON only with this exact shape:
     "lineHeight": number from 1.1 to 2.5 or null,
     "letterSpacingEm": number from 0 to 0.12 or null,
     "contentMaxWidthRem": number from 30 to 100 or null,
+    "headingColor": a safe named color or hex color, or null,
     "colorScheme": "unchanged" | "light" | "dark",
     "contrast": "unchanged" | "more",
     "reduceMotion": boolean,
@@ -17,7 +18,7 @@ Return JSON only with this exact shape:
     "hideSelectors": string[]
   }
 }
-Rules: make the smallest change that satisfies the request. Never output code, URLs, CSS declarations, HTML, scripts, pseudo-elements, :has(), attribute selectors for value/src/href, or selectors that target form values. hideSelectors is only for clearly distracting non-essential regions and must use simple stable selectors. Never hide navigation, main content, forms, dialogs, alerts, or focused elements.`;
+Rules: make the smallest change that satisfies the request. Reply in the same language as the user's request. Never substitute an unrelated accessibility change when the request is unclear or unsupported; return an unchanged patch instead. Never claim the extension has controls that are not described here. Never output code, URLs, CSS declarations, HTML, scripts, pseudo-elements, :has(), attribute selectors for value/src/href, or selectors that target form values. hideSelectors is only for clearly distracting non-essential regions and must use simple stable selectors. Never hide navigation, main content, forms, dialogs, alerts, or focused elements.`;
 
 function snapshotForProvider(snapshot: PageSnapshot): object {
   return {

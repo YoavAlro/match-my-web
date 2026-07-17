@@ -40,6 +40,12 @@ describe("adaptation validation", () => {
     expect(() => validateProposal(null)).toThrow();
     expect(validateProposal({ summary: "Larger copy", patch: { fontScale: 1.25 } }).summary).toBe("Larger copy");
   });
+
+  it("accepts safe heading colors and rejects executable CSS-like values", () => {
+    expect(validatePatch({ headingColor: "blue" }).headingColor).toBe("blue");
+    expect(validatePatch({ headingColor: "#1d4ed8" }).headingColor).toBe("#1d4ed8");
+    expect(validatePatch({ headingColor: "url(https://bad.test)" }).headingColor).toBeNull();
+  });
 });
 
 describe("Azure provider validation", () => {

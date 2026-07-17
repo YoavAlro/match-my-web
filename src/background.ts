@@ -1,6 +1,6 @@
 import { generateProposal, transcribeAudio } from "./provider";
 import { assertSamePageContext } from "./context-guard";
-import { getProfile, getProfiles, getProviderConfig, saveProfile, saveProviderConfig } from "./profile-store";
+import { getProfile, getProfiles, getProviderConfig, isOriginPaused, saveProfile, saveProviderConfig, setOriginPaused } from "./profile-store";
 import type { ExtensionMessage, MessageResult, PageContext, PageSnapshot, ProviderConfig, SiteProfile } from "./types";
 import { validateProviderConfig } from "./validation";
 
@@ -127,7 +127,27 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
       return true;
     }
     case "GET_PROFILE_FOR_URL":
-      return isWebUrl(message.url) ? getProfile(new URL(message.url).origin) : null;
+      if (!isWebUrl(message.url)) return null;
+      return await isOriginPaused(new URL(message.url).origin) ? null : getProfile(new URL(message.url).origin);
+    case "GET_SITE_STATUS": {
+      const actual = await currentContext();
+      const [profile, paused] = await Promise.all([getProfile(actual.origin), isOriginPaused(actual.origin)]);
+      return { hasProfile: profile !== null, paused };
+    }
+    case "SET_SITE_PAUSED": {
+      const actual = await currentContext();
+      assertSamePageContext(actual, message.context);
+      await setOriginPaused(actual.origin, message.paused);
+      if (message.paused) {
+        await chrome.tabs.sendMessage(actual.tabId, { type: "CONTENT_CLEAR", context: actual } satisfies ExtensionMessage);
+      } else {
+        const profile = await getProfile(actual.origin);
+        if (profile) {
+          await chrome.tabs.sendMessage(actual.tabId, { type: "CONTENT_APPLY", context: actual, patch: profile.patch, mode: "approved" } satisfies ExtensionMessage);
+        }
+      }
+      return { hasProfile: (await getProfile(actual.origin)) !== null, paused: message.paused };
+    }
     case "GENERATE_PROPOSAL": {
       const config = await getProviderConfig();
       if (!config) throw new Error("Save your AI provider, model, and API key first.");
@@ -176,6 +196,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
         schemaVersion: 1,
       };
       await saveProfile(profile);
+      await setOriginPaused(actual.origin, false);
       await registerOrigin(actual.origin);
       await chrome.tabs.sendMessage(actual.tabId, { type: "CONTENT_APPLY", context: actual, patch: profile.patch, mode: "approved" } satisfies ExtensionMessage);
       return profile;

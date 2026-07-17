@@ -19,10 +19,14 @@ export function buildAdaptationCss(patch: AdaptationPatch): string {
   const fontSize = patch.fontScale === null ? "" : `font-size: ${patch.fontScale}em !important;`;
   const lineHeight = patch.lineHeight === null ? "" : `line-height: ${patch.lineHeight} !important;`;
   const letterSpacing = patch.letterSpacingEm === null ? "" : `letter-spacing: ${patch.letterSpacingEm}em !important;`;
+  const headingColor = patch.headingColor === null
+    ? ""
+    : `:where(h1, h2, h3, [role="heading"]) { color: ${patch.headingColor} !important; }`;
 
   return `
     :root { ${fontSize} ${lineHeight} ${letterSpacing} ${color} ${contrast} }
     ${width}
+    ${headingColor}
     ${focus}
     ${motion}
     ${hidden}

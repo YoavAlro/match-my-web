@@ -20,10 +20,13 @@ if (!window.__MATCH_MY_WEB_SHADOW_HOOK__) {
       lineHeight: number("lineHeight", 1.1, 2.5),
       letterSpacingEm: number("letterSpacingEm", 0, 0.12),
       contentMaxWidthRem: number("contentMaxWidthRem", 30, 100),
+      headingColor: typeof input.headingColor === "string" && (/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(input.headingColor) || /^(?:black|white|gr[ae]y|red|orange|yellow|green|blue|purple|pink|brown|navy|teal|maroon)$/i.test(input.headingColor))
+        ? input.headingColor.toLowerCase()
+        : null,
       colorScheme: input.colorScheme === "dark" || input.colorScheme === "light" ? input.colorScheme : "unchanged",
       contrast: input.contrast === "more" ? "more" : "unchanged",
       reduceMotion: input.reduceMotion === true,
-      strongFocus: input.strongFocus !== false,
+      strongFocus: input.strongFocus === true,
       hideSelectors: Array.isArray(input.hideSelectors)
         ? input.hideSelectors.filter((item): item is string => typeof item === "string" && /^[.#a-zA-Z][\w .#>+~:-]*$/.test(item)).slice(0, 12)
         : [],
@@ -35,10 +38,12 @@ if (!window.__MATCH_MY_WEB_SHADOW_HOOK__) {
     const fontSize = patch.fontScale === null ? "" : `font-size: ${patch.fontScale}em !important;`;
     const lineHeight = patch.lineHeight === null ? "" : `line-height: ${patch.lineHeight} !important;`;
     const letterSpacing = patch.letterSpacingEm === null ? "" : `letter-spacing: ${patch.letterSpacingEm}em !important;`;
+    const headingColor = patch.headingColor === null ? "" : `:where(h1,h2,h3,[role="heading"]) { color: ${patch.headingColor} !important; }`;
     return `
       :host { ${fontSize} ${lineHeight} ${letterSpacing} ${patch.colorScheme === "unchanged" ? "" : `color-scheme: ${patch.colorScheme} !important;`} }
       ${patch.strongFocus ? `:focus-visible { outline: 3px solid #f59e0b !important; outline-offset: 3px !important; }` : ""}
       ${patch.reduceMotion ? `*,*::before,*::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }` : ""}
+      ${headingColor}
       ${hidden}`;
   }
 

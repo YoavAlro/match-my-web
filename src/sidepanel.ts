@@ -1,4 +1,4 @@
-import type { ExtensionMessage, MessageResult, PageContext, PageSnapshot, Proposal, ProviderConfig } from "./types";
+import type { ExtensionMessage, MessageResult, PageContext, PageSnapshot, Proposal, ProviderConfig, SiteStatus } from "./types";
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const element = document.getElementById(id);
@@ -21,12 +21,15 @@ const providerSelect = $<HTMLSelectElement>("provider");
 const azureSettings = $("azure-settings");
 const endpointInput = $<HTMLInputElement>("endpoint");
 const voiceNote = $("voice-note");
+const pauseSiteButton = $<HTMLButtonElement>("pause-site");
 
 let snapshot: PageSnapshot | null = null;
 let activeProposal: Proposal | null = null;
 let proposalContext: PageContext | null = null;
 let recorder: MediaRecorder | null = null;
 let recordingTimer: number | null = null;
+let currentPageContext: PageContext | null = null;
+let currentSiteStatus: SiteStatus = { hasProfile: false, paused: false };
 
 function updateProviderFields(): void {
   const isAzure = providerSelect.value === "azure";
@@ -91,6 +94,7 @@ function describePatch(proposal: Proposal): void {
     ["Line height", proposal.patch.lineHeight === null ? "Unchanged" : String(proposal.patch.lineHeight)],
     ["Letter spacing", proposal.patch.letterSpacingEm === null ? "Unchanged" : `${proposal.patch.letterSpacingEm}em`],
     ["Content width", proposal.patch.contentMaxWidthRem ? `${proposal.patch.contentMaxWidthRem}rem` : "Unchanged"],
+    ["Heading color", proposal.patch.headingColor ?? "Unchanged"],
     ["Color scheme", proposal.patch.colorScheme],
     ["Contrast", proposal.patch.contrast],
     ["Motion", proposal.patch.reduceMotion ? "Reduced" : "Unchanged"],
@@ -111,12 +115,35 @@ function describePatch(proposal: Proposal): void {
 async function refreshContext(): Promise<void> {
   try {
     const context = await send<PageContext>({ type: "GET_ACTIVE_CONTEXT" });
+    currentPageContext = context;
     pageBadge.textContent = "Ready";
     pageDetail.textContent = `${context.title || "Untitled page"} — ${context.origin}`;
+    await refreshSiteStatus();
   } catch (error) {
     pageBadge.textContent = "Unavailable";
     pageDetail.textContent = error instanceof Error ? error.message : "This page cannot be adapted.";
   }
+}
+
+function renderSiteStatus(): void {
+  pauseSiteButton.disabled = !currentSiteStatus.hasProfile;
+  pauseSiteButton.textContent = !currentSiteStatus.hasProfile
+    ? "No saved profile"
+    : currentSiteStatus.paused ? "Resume on this site" : "Pause on this site";
+  pauseSiteButton.setAttribute("aria-pressed", String(currentSiteStatus.paused));
+}
+
+async function refreshSiteStatus(): Promise<void> {
+  currentSiteStatus = await send<SiteStatus>({ type: "GET_SITE_STATUS" });
+  renderSiteStatus();
+}
+
+async function setSitePaused(paused: boolean): Promise<void> {
+  const context = currentPageContext ?? await send<PageContext>({ type: "GET_ACTIVE_CONTEXT" });
+  currentPageContext = context;
+  currentSiteStatus = await send<SiteStatus>({ type: "SET_SITE_PAUSED", context, paused });
+  renderSiteStatus();
+  setStatus(paused ? "Saved adaptations are paused on this site." : "Saved adaptations are active on this site.");
 }
 
 async function inspectWithAccessPrompt(): Promise<PageSnapshot> {
@@ -146,6 +173,7 @@ $("inspect").addEventListener("click", async (event) => {
   busy(button, true, "Inspecting…");
   try {
     snapshot = await inspectWithAccessPrompt();
+    currentPageContext = snapshot.context;
     pageBadge.textContent = "Inspected";
     pageDetail.textContent = `${snapshot.context.title || "Untitled page"} — ${snapshot.context.origin}`;
     setStatus("Page structure is ready. Nothing has been sent to an AI provider yet.");
@@ -199,8 +227,15 @@ $("prompt-form").addEventListener("submit", async (event) => {
   const button = $<HTMLButtonElement>("generate");
   busy(button, true, "Generating…");
   try {
-    if (!snapshot) snapshot = await inspectWithAccessPrompt();
     addMessage(`You: ${request}`);
+    const asksHowToToggle = /\bhow\b.*\b(?:toggle|turn|switch|disable|pause|resume)\b|\bwhere\b.*\b(?:toggle|pause|resume)\b/i.test(request);
+    if (asksHowToToggle) {
+      addMessage("Match My Web: Use the “Pause on this site” button in the Current page section. It changes to “Resume on this site” while paused.");
+      setStatus("No AI request was needed.");
+      return;
+    }
+    snapshot = await inspectWithAccessPrompt();
+    currentPageContext = snapshot.context;
     const result = await send<{ proposal: Proposal; context: PageContext }>({ type: "GENERATE_PROPOSAL", request, snapshot });
     activeProposal = result.proposal;
     proposalContext = result.context;
@@ -253,11 +288,25 @@ saveButton.addEventListener("click", async () => {
     const granted = await chrome.permissions.request({ origins: [originPattern] });
     if (!granted) throw new Error("Site access was not granted. The preview remains temporary and was not saved.");
     await send({ type: "SAVE_PROFILE", context: proposalContext, proposal: activeProposal });
+    currentPageContext = proposalContext;
+    await refreshSiteStatus();
     setStatus(`Profile saved locally for ${proposalContext.origin}.`);
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "Could not save the profile.", true);
   } finally {
     busy(saveButton, false, "");
+  }
+});
+
+pauseSiteButton.addEventListener("click", async () => {
+  busy(pauseSiteButton, true, currentSiteStatus.paused ? "Resuming…" : "Pausing…");
+  try {
+    await setSitePaused(!currentSiteStatus.paused);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "Could not change the site profile state.", true);
+  } finally {
+    busy(pauseSiteButton, false, "");
+    renderSiteStatus();
   }
 });
 

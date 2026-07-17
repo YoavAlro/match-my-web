@@ -40,8 +40,9 @@ describe("Azure OpenAI requests", () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://my-resource.openai.azure.com/openai/v1/chat/completions");
     expect(init.headers).toMatchObject({ "api-key": "azure-secret-key" });
-    const body = JSON.parse(String(init.body)) as { model: string; messages: Array<{ content: string }> };
+    const body = JSON.parse(String(init.body)) as { model: string; messages: Array<{ content: string }>; temperature?: number };
     expect(body.model).toBe("my-chat-deployment");
+    expect(body.temperature).toBeUndefined();
     expect(body.messages[1]?.content).not.toContain("private=value");
   });
 });

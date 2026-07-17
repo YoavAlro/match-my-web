@@ -55,7 +55,6 @@ export async function generateProposal(config: ProviderConfig, request: string, 
         : { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify({
         model: config.model,
-        temperature: 0.1,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

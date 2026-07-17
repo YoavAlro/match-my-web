@@ -230,7 +230,12 @@ $("prompt-form").addEventListener("submit", async (event) => {
     addMessage(`You: ${request}`);
     const asksHowToToggle = /\bhow\b.*\b(?:toggle|turn|switch|disable|pause|resume)\b|\bwhere\b.*\b(?:toggle|pause|resume)\b/i.test(request);
     if (asksHowToToggle) {
-      addMessage("Match My Web: Use the “Pause on this site” button in the Current page section. It changes to “Resume on this site” while paused.");
+      const guidance = !saveButton.disabled
+        ? "Use “Undo preview” to remove the temporary preview."
+        : currentSiteStatus.hasProfile
+          ? "Use “Pause on this site” in the Current page section. It changes to “Resume on this site” while paused."
+          : "There is no saved adaptation active on this site. Previewed changes can be removed with “Undo preview”.";
+      addMessage(`Match My Web: ${guidance}`);
       setStatus("No AI request was needed.");
       return;
     }

@@ -1,6 +1,6 @@
-# Match My Web
+# Tweaksy
 
-Match My Web is a privacy-first Manifest V3 Chrome extension that lets a person describe visual website adaptations in plain language, preview them safely, and save approved changes as local site profiles.
+Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person describe visual website adaptations in plain language, preview them safely, and save approved changes as local site profiles.
 
 ## What works in this MVP foundation
 
@@ -8,13 +8,23 @@ Match My Web is a privacy-first Manifest V3 Chrome extension that lets a person 
 - Sends a bounded, value-free page snapshot only when the user chooses **Generate preview**.
 - Uses the user's OpenAI, Azure OpenAI, or Anthropic account, model/deployment, and API key.
 - Accepts a small declarative adaptation schema—never AI-generated JavaScript, HTML, remote code, or raw CSS.
+- Remembers at most 12 chat turns per site in browser-session storage so follow-ups retain context without crossing site boundaries.
+- Supports deterministic headline colors, a full-page article deck with touch swiping, mouse dragging, keyboard navigation, optional side controls, and reversible red-to-blue/teal interface-color remapping.
+- Recognizes visible social-feed posts for swipe decks, preserving author, text, and visible image/video media without a generic article button; post details open in a local accessible dialog with a link to the original conversation.
+- Keeps preview, measured application results, approval, and undo controls inside the chat instead of claiming an unverified action succeeded.
+- Provides an explicit, key-free JSON diagnostic export that can be saved into the project workspace for debugging.
+- Shares approved profiles as versioned `.tweaksy.json` files through the system share sheet or a file-save fallback. Recipients must open the matching origin, import, preview, and explicitly approve the validated declarative patch. Legacy `.matchmyweb.json` files remain importable.
+- Treats chat as the command surface for safe extension actions: inspect, preview, approve/save, cancel/revise, undo, pause/resume, share, import, debug export, and opening settings. API keys and provider credentials remain manual-only.
+- Maps familiar website-style references to a small set of non-identical, validated visual themes rather than copying third-party CSS, logos, or trademarked brand assets.
+- Composes follow-up requests as incremental patches over the active design, preserving its palette and other established settings unless the user explicitly requests a validated field reset.
+- Rejects inherited no-op proposals and invalidates late responses when a proposal is canceled or another page action supersedes the request.
 - Validates and clamps every AI field and rejects risky selectors.
 - Applies previews reversibly and saves only after a separate approval.
 - Requests ongoing access to the approved origin only; other sites remain inaccessible.
 - Persists profiles in `chrome.storage.local` and registers origin-scoped document-start scripts across reloads and browser restarts.
 - Styles the document plus open and newly created closed shadow roots.
 - Rejects stale results using a four-part guard: tab ID, document token, same-document navigation token, and exact URL.
-- Supports keyboard input and optional push-to-record transcription. Audio is never saved.
+- Supports keyboard input and on-device Chrome speech recognition when available, with the user's configured provider as an optional fallback. Audio is never saved.
 
 ## Local development
 
@@ -30,9 +40,13 @@ Load `dist/` as an unpacked extension:
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select this repository's `dist` folder.
-4. Pin Match My Web, open a normal website, click the toolbar button, and choose **Open for this page**. This deliberate click grants temporary `activeTab` access for the current page.
+4. Pin Tweaksy, open a normal website, click the toolbar button, and choose **Open for this page**. This deliberate click grants temporary `activeTab` access for the current page.
 
 The extension requests no site access at install time. Clicking the toolbar provides temporary `activeTab` access. Approving a profile prompts for persistent access to that single origin.
+
+### Share a design
+
+Save and approve a profile, then say “share this design” in chat or choose **Share saved design** from the top action menu. The shared file contains the exact origin, profile name, declarative patch, format version, and export time—never an API key, page contents, scripts, HTML, or raw CSS. A recipient opens the same website, asks to import a design or uses the action menu, reviews the normalized settings in chat, previews them, and grants that origin access only when approving and saving.
 
 ### Azure OpenAI setup
 
@@ -56,6 +70,8 @@ The extension uses Azure's unified `POST /openai/v1/chat/completions` API and re
 - `docs/THREAT_MODEL.md` — security analysis and mitigations.
 - `docs/RELEASE_CHECKLIST.md` — production and Chrome Web Store gates.
 
+- `docs/BRAND.md` — Tweaksy identity, mascot states, palette, and accessibility rules.
+
 ## Important limits
 
 - Chrome internal pages, the Chrome Web Store, and other restricted schemes cannot be inspected or changed.
@@ -65,4 +81,4 @@ The extension uses Azure's unified `POST /openai/v1/chat/completions` API and re
 
 ## Brand
 
-**Match My Web** keeps the intent of the working name “Match My Exp” while being easier to understand, pronounce, and find. The mark combines a speech bubble with adjustment controls. It is legible at 16px, avoids color-only meaning, and uses high-contrast navy, white, blue, and amber.
+**Tweaksy** means the web can be gently reshaped around the person using it. Its mascot, **Tweak**, keeps one recognizable silhouette while changing expression, color, and status symbol for ready, thinking, preview, saved, and error states. Status never depends on color alone. The tagline is **“The web, shaped for you.”**

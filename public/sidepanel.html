@@ -4,33 +4,53 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <title>Match My Web</title>
+    <title>Tweaksy</title>
     <link rel="stylesheet" href="sidepanel.css" />
   </head>
   <body>
     <header class="app-header">
-      <img src="icons/icon-48.png" width="40" height="40" alt="" />
-      <div>
-        <h1>Match My Web</h1>
-        <p>Your web, fitted to you.</p>
+      <span class="sr-only">Tweaksy controls</span>
+      <div class="header-actions">
+        <button class="header-icon-button" type="button" popovertarget="actions-menu" aria-label="Open page and design actions" title="Page and design actions">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+        </button>
+        <button id="settings-open" class="header-icon-button" type="button" aria-label="Open AI provider settings" title="AI provider settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+        </button>
       </div>
     </header>
 
-    <main>
-      <section class="card" aria-labelledby="page-heading">
-        <div class="section-heading">
-          <h2 id="page-heading">Current page</h2>
+    <div id="actions-menu" class="actions-menu" popover="auto">
+      <div class="menu-page">
+        <div class="menu-page-heading">
+          <span>Current page</span>
           <span id="page-badge" class="badge">Checking…</span>
         </div>
-        <p id="page-detail" class="muted">Open a regular web page, then choose Inspect this page.</p>
-        <div class="button-row">
-          <button id="inspect" class="secondary" type="button">Inspect this page</button>
-          <button id="pause-site" class="secondary" type="button" disabled>No saved profile</button>
-        </div>
-      </section>
+        <p id="page-detail" class="muted">Open a regular web page to begin.</p>
+      </div>
+      <div class="menu-section" aria-label="Page actions">
+        <button id="inspect" class="menu-item" type="button"><span>Inspect current page</span><kbd>↗</kbd></button>
+        <button id="pause-site" class="menu-item" type="button" disabled><span>No saved profile</span></button>
+      </div>
+      <div class="menu-separator"></div>
+      <div class="menu-section" aria-label="Design actions">
+        <button id="share-design" class="menu-item" type="button" disabled><span>Share saved design</span></button>
+        <button id="import-design" class="menu-item" type="button"><span>Import a design</span></button>
+        <button id="export-log" class="menu-item subtle" type="button"><span>Export debug log</span></button>
+        <input id="import-design-file" type="file" accept="application/json,.json,.tweaksy.json,.matchmyweb.json" hidden />
+      </div>
+    </div>
 
-      <details class="card settings">
-        <summary>AI provider and privacy</summary>
+    <main>
+      <dialog id="settings-dialog" aria-labelledby="settings-heading">
+        <div class="dialog-header">
+          <div>
+            <span class="eyebrow">Private connection</span>
+            <h2 id="settings-heading">AI provider settings</h2>
+          </div>
+          <button id="settings-close" class="dialog-close" type="button" aria-label="Close settings">×</button>
+        </div>
+        <p class="muted">Your credentials stay in local extension storage and are sent only to the provider you configure.</p>
         <form id="provider-form">
           <label for="provider">Provider</label>
           <select id="provider" name="provider">
@@ -52,25 +72,33 @@
           <p class="hint">Stored only in Chrome’s local extension storage. Page data goes only to this provider after you choose Generate.</p>
           <button type="submit" class="secondary">Save provider</button>
         </form>
-      </details>
+      </dialog>
 
       <section class="chat" aria-labelledby="chat-heading">
-        <h2 id="chat-heading">Describe what would help</h2>
-        <div id="conversation" class="conversation" role="log" aria-live="polite" aria-relevant="additions"></div>
-        <form id="prompt-form">
-          <label for="prompt" class="sr-only">Website adaptation request</label>
-          <textarea id="prompt" rows="4" placeholder="For example: Make the text larger, reduce motion, and keep the article in a narrower column."></textarea>
-          <div class="composer-actions">
-            <button id="record" class="icon-button" type="button" aria-pressed="false">
-              <span aria-hidden="true">●</span> Record
-            </button>
-            <button id="generate" class="primary" type="submit">Generate preview</button>
+        <div class="chat-title">
+          <div>
+            <h2 id="chat-heading">How should this page change?</h2>
           </div>
-          <p id="voice-note" class="hint">Recording is optional. Audio is sent to your configured OpenAI provider for transcription and is never saved.</p>
+          <span class="privacy-dot">Private</span>
+        </div>
+        <div id="conversation" class="conversation" role="log" tabindex="0" aria-label="Adaptation conversation" aria-live="polite" aria-relevant="additions"></div>
+        <div id="action-dock" class="action-dock" aria-label="Active proposal actions" hidden></div>
+        <form id="prompt-form" class="composer">
+          <label for="prompt" class="sr-only">Website adaptation request</label>
+          <textarea id="prompt" rows="3" placeholder="Describe the result you want…"></textarea>
+          <div class="composer-actions">
+            <button id="record" class="record-button" type="button" aria-label="Start voice input" title="Start voice input" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6"/></svg>
+            </button>
+            <span class="composer-hint">Ctrl + Enter</span>
+            <button id="generate" class="primary send-button" type="submit">Send</button>
+          </div>
+          <p id="voice-note" class="sr-only">Recording is optional. Audio is sent to your configured OpenAI provider for transcription and is never saved.</p>
         </form>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
       </section>
 
-      <section id="proposal" class="card proposal" aria-labelledby="proposal-heading" hidden>
+      <section id="proposal" class="card proposal" aria-labelledby="proposal-heading" hidden aria-hidden="true">
         <h2 id="proposal-heading">Suggested adaptation</h2>
         <p id="proposal-summary"></p>
         <dl id="proposal-details"></dl>
@@ -83,7 +111,6 @@
       </section>
     </main>
 
-    <div id="status" class="status" role="status" aria-live="polite"></div>
     <script src="sidepanel.js"></script>
   </body>
 </html>

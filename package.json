@@ -1,6 +1,6 @@
 {
-  "name": "match-my-web",
-  "version": "0.2.0",
+  "name": "tweaksy-extension",
+  "version": "0.11.5",
   "private": true,
   "description": "Privacy-first Chrome extension for conversational website adaptations.",
   "type": "module",

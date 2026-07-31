@@ -11,7 +11,7 @@ await rm(outdir, { recursive: true, force: true });
 await mkdir(path.join(outdir, "icons"), { recursive: true });
 await cp(path.join(root, "public"), outdir, { recursive: true });
 
-const icon = path.join(root, "assets", "match-my-web-mark.svg");
+const icon = path.join(root, "assets", "tweaksy-mark.svg");
 await Promise.all(
   [16, 32, 48, 128].map((size) =>
     sharp(icon).resize(size, size).png().toFile(path.join(outdir, "icons", `icon-${size}.png`)),
@@ -38,7 +38,7 @@ const options = {
 if (watch) {
   const ctx = await context(options);
   await ctx.watch();
-  console.log("Watching Match My Web sources…");
+  console.log("Watching Tweaksy sources…");
 } else {
   await build(options);
 }

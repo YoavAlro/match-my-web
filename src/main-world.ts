@@ -23,6 +23,17 @@ if (!window.__MATCH_MY_WEB_SHADOW_HOOK__) {
       headingColor: typeof input.headingColor === "string" && (/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(input.headingColor) || /^(?:black|white|gr[ae]y|red|orange|yellow|green|blue|purple|pink|brown|navy|teal|maroon)$/i.test(input.headingColor))
         ? input.headingColor.toLowerCase()
         : null,
+      articleLayout: input.articleLayout === "swipe-cards" ? "swipe-cards" : "unchanged",
+      deckControls: input.articleLayout === "swipe-cards" && input.deckControls === "sides" ? "sides" : "unchanged",
+      deckImageSize: input.articleLayout === "swipe-cards" && input.deckImageSize === "compact" ? "compact" : "unchanged",
+      deckLinkPosition: input.articleLayout === "swipe-cards" && input.deckLinkPosition === "footer" ? "footer" : "unchanged",
+      colorVisionMode: input.colorVisionMode === "avoid-red" ? "avoid-red" : "unchanged",
+      themePreset: input.themePreset === "warm-hospitality"
+        || input.themePreset === "clean-minimal"
+        || input.themePreset === "bold-dark"
+        || input.themePreset === "paper-editorial"
+        ? input.themePreset
+        : "unchanged",
       colorScheme: input.colorScheme === "dark" || input.colorScheme === "light" ? input.colorScheme : "unchanged",
       contrast: input.contrast === "more" ? "more" : "unchanged",
       reduceMotion: input.reduceMotion === true,
@@ -38,7 +49,7 @@ if (!window.__MATCH_MY_WEB_SHADOW_HOOK__) {
     const fontSize = patch.fontScale === null ? "" : `font-size: ${patch.fontScale}em !important;`;
     const lineHeight = patch.lineHeight === null ? "" : `line-height: ${patch.lineHeight} !important;`;
     const letterSpacing = patch.letterSpacingEm === null ? "" : `letter-spacing: ${patch.letterSpacingEm}em !important;`;
-    const headingColor = patch.headingColor === null ? "" : `:where(h1,h2,h3,[role="heading"]) { color: ${patch.headingColor} !important; }`;
+    const headingColor = patch.headingColor === null ? "" : `:where(h1,h2,h3,[role="heading"]),:where(h1,h2,h3,[role="heading"]) * { color: ${patch.headingColor} !important; }`;
     return `
       :host { ${fontSize} ${lineHeight} ${letterSpacing} ${patch.colorScheme === "unchanged" ? "" : `color-scheme: ${patch.colorScheme} !important;`} }
       ${patch.strongFocus ? `:focus-visible { outline: 3px solid #f59e0b !important; outline-offset: 3px !important; }` : ""}

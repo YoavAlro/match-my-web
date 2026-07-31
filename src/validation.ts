@@ -1,4 +1,4 @@
-import type { AdaptationPatch, Proposal, ProviderConfig } from "./types";
+import { ADAPTATION_FIELDS, hasAdaptationChanges, type AdaptationField, type AdaptationPatch, type Proposal, type ProviderConfig, type SharedDesign } from "./types";
 
 const FORBIDDEN_SELECTOR = /(?:url\s*\(|@import|javascript:|data:|\[[^\]]*(?:value|src|href)\s*[*^$|~]?=|:has\s*\()/i;
 const SAFE_SELECTOR = /^(?:[.#]?[a-zA-Z][\w-]*|\[[a-zA-Z][\w-]*(?:=["']?[\w -]+["']?)?\])(?:[ >+~:.#\[\]="'()\w-])*$/;
@@ -44,6 +44,17 @@ export function validatePatch(input: unknown): AdaptationPatch {
     letterSpacingEm: optionalNumber(value.letterSpacingEm, 0, 0.12),
     contentMaxWidthRem: maxWidth,
     headingColor: sanitizeColor(value.headingColor),
+    articleLayout: value.articleLayout === "swipe-cards" ? "swipe-cards" : "unchanged",
+    deckControls: value.deckControls === "sides" ? "sides" : "unchanged",
+    deckImageSize: value.deckImageSize === "compact" ? "compact" : "unchanged",
+    deckLinkPosition: value.deckLinkPosition === "footer" ? "footer" : "unchanged",
+    colorVisionMode: value.colorVisionMode === "avoid-red" ? "avoid-red" : "unchanged",
+    themePreset: value.themePreset === "warm-hospitality"
+      || value.themePreset === "clean-minimal"
+      || value.themePreset === "bold-dark"
+      || value.themePreset === "paper-editorial"
+      ? value.themePreset
+      : "unchanged",
     colorScheme: value.colorScheme === "light" || value.colorScheme === "dark" ? value.colorScheme : "unchanged",
     contrast: value.contrast === "more" ? "more" : "unchanged",
     reduceMotion: value.reduceMotion === true,
@@ -56,7 +67,45 @@ export function validateProposal(input: unknown): Proposal {
   if (!input || typeof input !== "object") throw new Error("The provider did not return an adaptation object.");
   const value = input as Record<string, unknown>;
   const summary = typeof value.summary === "string" ? value.summary.trim().slice(0, 500) : "Suggested visual adaptation";
-  return { summary, patch: validatePatch(value.patch) };
+  const allowedFields = new Set<string>(ADAPTATION_FIELDS);
+  const resetFields = Array.isArray(value.resetFields)
+    ? [...new Set(value.resetFields.filter((field): field is AdaptationField => typeof field === "string" && allowedFields.has(field)))].slice(0, ADAPTATION_FIELDS.length)
+    : [];
+  return { summary, patch: validatePatch(value.patch), ...(resetFields.length ? { resetFields } : {}) };
+}
+
+export function validateSharedDesign(input: unknown): SharedDesign {
+  if (!input || typeof input !== "object") throw new Error("The shared design file is not a JSON object.");
+  const value = input as Record<string, unknown>;
+  const supportedFormat = value.format === "tweaksy-design" || value.format === "match-my-web-design";
+  if (!supportedFormat || value.schemaVersion !== 1) {
+    throw new Error("This is not a supported Tweaksy design file.");
+  }
+  if (typeof value.origin !== "string") throw new Error("The shared design does not identify a website origin.");
+  let origin: URL;
+  try {
+    origin = new URL(value.origin);
+  } catch {
+    throw new Error("The shared design contains an invalid website origin.");
+  }
+  if ((origin.protocol !== "https:" && origin.protocol !== "http:") || origin.username || origin.password || origin.origin !== value.origin || origin.pathname !== "/" || origin.search || origin.hash) {
+    throw new Error("The shared design must target one exact HTTP or HTTPS website origin.");
+  }
+  const name = typeof value.name === "string" ? value.name.trim().slice(0, 200) : "";
+  if (!name) throw new Error("The shared design is missing a name.");
+  const exportedAt = typeof value.exportedAt === "string" && !Number.isNaN(Date.parse(value.exportedAt))
+    ? new Date(value.exportedAt).toISOString()
+    : new Date(0).toISOString();
+  const patch = validatePatch(value.patch);
+  if (!hasAdaptationChanges(patch)) throw new Error("This shared design contains no visual changes to preview.");
+  return {
+    format: "tweaksy-design",
+    schemaVersion: 1,
+    origin: origin.origin,
+    name,
+    patch,
+    exportedAt,
+  };
 }
 
 export function validateProviderConfig(input: unknown): ProviderConfig {

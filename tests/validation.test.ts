@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validatePatch, validateProposal, validateProviderConfig } from "../src/validation";
+import { validatePatch, validateProposal, validateProviderConfig, validateSharedDesign } from "../src/validation";
 
 describe("adaptation validation", () => {
   it("clamps numeric controls and normalizes enums", () => {
@@ -10,6 +10,7 @@ describe("adaptation validation", () => {
       contentMaxWidthRem: 10,
       colorScheme: "sepia",
       contrast: "more",
+      themePreset: "copied-brand-css",
     });
     expect(patch.fontScale).toBe(2);
     expect(patch.lineHeight).toBe(1.1);
@@ -17,6 +18,7 @@ describe("adaptation validation", () => {
     expect(patch.contentMaxWidthRem).toBe(30);
     expect(patch.colorScheme).toBe("unchanged");
     expect(patch.contrast).toBe("more");
+    expect(patch.themePreset).toBe("unchanged");
   });
 
   it("drops selectors that could exfiltrate or overreach", () => {
@@ -41,10 +43,25 @@ describe("adaptation validation", () => {
     expect(validateProposal({ summary: "Larger copy", patch: { fontScale: 1.25 } }).summary).toBe("Larger copy");
   });
 
+  it("accepts only known fields in an explicit reset request", () => {
+    const proposal = validateProposal({
+      summary: "Keep the layout but restore the original palette",
+      patch: {},
+      resetFields: ["themePreset", "colorScheme", "apiKey", "themePreset"],
+    });
+    expect(proposal.resetFields).toEqual(["themePreset", "colorScheme"]);
+  });
+
   it("accepts safe heading colors and rejects executable CSS-like values", () => {
     expect(validatePatch({ headingColor: "blue" }).headingColor).toBe("blue");
     expect(validatePatch({ headingColor: "#1d4ed8" }).headingColor).toBe("#1d4ed8");
     expect(validatePatch({ headingColor: "url(https://bad.test)" }).headingColor).toBeNull();
+  });
+
+  it("allows side-mounted controls only for the extension-owned swipe deck", () => {
+    expect(validatePatch({ articleLayout: "swipe-cards", deckControls: "sides" }).deckControls).toBe("sides");
+    expect(validatePatch({ articleLayout: "unchanged", deckControls: "sides" }).deckControls).toBe("sides");
+    expect(validatePatch({ deckImageSize: "compact", deckLinkPosition: "footer" })).toMatchObject({ deckImageSize: "compact", deckLinkPosition: "footer" });
   });
 });
 
@@ -68,5 +85,58 @@ describe("Azure provider validation", () => {
       apiKey: "azure-key-value",
       endpoint: "https://azure.example.test",
     })).toThrow(/Microsoft Azure/);
+  });
+});
+
+describe("shared design validation", () => {
+  it("accepts a portable declarative design and sanitizes its patch", () => {
+    const design = validateSharedDesign({
+      format: "tweaksy-design",
+      schemaVersion: 1,
+      origin: "https://example.com",
+      name: "Calm reading view",
+      exportedAt: "2026-07-17T12:00:00.000Z",
+      patch: { headingColor: "blue", hideSelectors: [".ad-slot", "input[value='secret']"] },
+    });
+    expect(design.origin).toBe("https://example.com");
+    expect(design.format).toBe("tweaksy-design");
+    expect(design.patch.headingColor).toBe("blue");
+    expect(design.patch.hideSelectors).toEqual([".ad-slot"]);
+  });
+
+  it("imports legacy Match My Web designs and normalizes them to Tweaksy", () => {
+    const design = validateSharedDesign({
+      format: "match-my-web-design",
+      schemaVersion: 1,
+      origin: "https://example.com",
+      name: "Legacy reading view",
+      exportedAt: "2026-07-17T12:00:00.000Z",
+      patch: { fontScale: 1.2 },
+    });
+    expect(design.format).toBe("tweaksy-design");
+    expect(design.patch.fontScale).toBe(1.2);
+  });
+
+  it("rejects unsupported formats and non-origin targets", () => {
+    expect(() => validateSharedDesign({ format: "other", schemaVersion: 1 })).toThrow(/supported/);
+    expect(() => validateSharedDesign({
+      format: "match-my-web-design",
+      schemaVersion: 1,
+      origin: "https://example.com/private/path",
+      name: "Bad target",
+      patch: {},
+      exportedAt: new Date().toISOString(),
+    })).toThrow(/exact/);
+  });
+
+  it("rejects shared designs that contain nothing to preview", () => {
+    expect(() => validateSharedDesign({
+      format: "match-my-web-design",
+      schemaVersion: 1,
+      origin: "https://example.com",
+      name: "Empty design",
+      patch: {},
+      exportedAt: new Date().toISOString(),
+    })).toThrow(/no visual changes/);
   });
 });

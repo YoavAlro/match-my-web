@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Tweak needs attention</title>
+  <desc id="desc">A concerned coral mascot with an exclamation badge.</desc>
+  <path d="M29 104C16 95 13 78 19 64c4-10 3-22 9-33 7-14 22-17 35-13 12 4 20-7 33-3 15 5 19 22 12 36-4 8 3 15 2 28-1 19-15 31-33 30-15-1-25 5-38 0-4-1-7-3-10-5Z" fill="#ED6A5A" stroke="#0B1F33" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M39 52c5-3 10-2 14 2M75 54c4-4 9-5 14-2" fill="none" stroke="#0B1F33" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="47" cy="64" rx="5" ry="7" fill="#0B1F33"/>
+  <ellipse cx="81" cy="64" rx="5" ry="7" fill="#0B1F33"/>
+  <path d="M55 84c5-4 13-4 18 0" fill="none" stroke="#0B1F33" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="99" cy="96" r="22" fill="#FFFFFF" stroke="#0B1F33" stroke-width="4"/>
+  <path d="M99 84v14" fill="none" stroke="#0B1F33" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="99" cy="106" r="3" fill="#0B1F33"/>
+</svg>

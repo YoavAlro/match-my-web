@@ -1,19 +1,19 @@
 import { generateProposal, transcribeAudio } from "./provider";
+import { proposalFromSupportedIntent } from "./intent";
 import { assertSamePageContext } from "./context-guard";
 import { getProfile, getProfiles, getProviderConfig, isOriginPaused, saveProfile, saveProviderConfig, setOriginPaused } from "./profile-store";
-import type { ExtensionMessage, MessageResult, PageContext, PageSnapshot, ProviderConfig, SiteProfile } from "./types";
-import { validateProviderConfig } from "./validation";
+import type { ApplyReport, ExtensionMessage, MessageResult, PageContext, PageSnapshot, ProviderConfig, SiteProfile } from "./types";
+import { validateProviderConfig, validateSharedDesign } from "./validation";
+import { registrationAlreadyExists, registrationErrorMessage } from "./registration";
 
 const requests = new Map<number, AbortController>();
 
 chrome.runtime.onInstalled.addListener(() => {
-  void chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
-  void syncRegisteredScripts();
+  scheduleRegisteredScriptSync();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  void chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
-  void syncRegisteredScripts();
+  scheduleRegisteredScriptSync();
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
@@ -81,14 +81,39 @@ function scriptId(origin: string, world: "main" | "isolated"): string {
   return `mmw_${world}_${(first >>> 0).toString(16)}${(second >>> 0).toString(16)}`;
 }
 
-async function registerOrigin(origin: string): Promise<void> {
+let registrationQueue: Promise<void> = Promise.resolve();
+
+async function ensureRegisteredScript(script: chrome.scripting.RegisteredContentScript): Promise<void> {
+  const registered = await chrome.scripting.getRegisteredContentScripts({ ids: [script.id] });
+  if (registered.some((item) => item.id === script.id)) return;
+
+  try {
+    await chrome.scripting.registerContentScripts([script]);
+  } catch (error) {
+    // A previous/overlapping extension worker may win between the lookup and
+    // registration. The duplicate result is the desired final state.
+    if (registrationAlreadyExists(error)) return;
+    throw new Error(`Could not register Tweaksy script '${script.id}': ${registrationErrorMessage(error)}`);
+  }
+}
+
+async function ensureOriginRegistration(origin: string): Promise<void> {
   const matches = [`${origin}/*`];
   const ids = [scriptId(origin, "main"), scriptId(origin, "isolated")];
-  await chrome.scripting.unregisterContentScripts({ ids }).catch(() => undefined);
-  await chrome.scripting.registerContentScripts([
+  const scripts: chrome.scripting.RegisteredContentScript[] = [
     { id: ids[0]!, matches, js: ["main-world.js"], runAt: "document_start", world: "MAIN", persistAcrossSessions: true },
     { id: ids[1]!, matches, js: ["content.js"], runAt: "document_start", world: "ISOLATED", persistAcrossSessions: true },
-  ]);
+  ];
+  for (const script of scripts) await ensureRegisteredScript(script);
+}
+
+function registerOrigin(origin: string): Promise<void> {
+  const operation = registrationQueue.then(
+    () => ensureOriginRegistration(origin),
+    () => ensureOriginRegistration(origin),
+  );
+  registrationQueue = operation.catch(() => undefined);
+  return operation;
 }
 
 async function syncRegisteredScripts(): Promise<void> {
@@ -97,6 +122,12 @@ async function syncRegisteredScripts(): Promise<void> {
     const granted = await chrome.permissions.contains({ origins: [`${origin}/*`] });
     if (granted) await registerOrigin(origin);
   }
+}
+
+function scheduleRegisteredScriptSync(): void {
+  void chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" })
+    .then(() => syncRegisteredScripts())
+    .catch((error: unknown) => console.warn("Tweaksy could not synchronize saved site scripts.", error));
 }
 
 async function handleMessage(message: ExtensionMessage): Promise<unknown> {
@@ -108,7 +139,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
     case "REQUEST_ACTIVE_SITE_ACCESS": {
       const tab = await activeTab();
       if (!chrome.permissions.addHostAccessRequest) {
-        throw new Error("Chrome could not show a site-access prompt. Click the Match My Web toolbar button once, then try Inspect again.");
+        throw new Error("Chrome could not show a site-access prompt. Click the Tweaksy toolbar button once, then try Inspect again.");
       }
       await chrome.permissions.addHostAccessRequest({ tabId: tab.id! });
       return true;
@@ -134,6 +165,12 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
       const [profile, paused] = await Promise.all([getProfile(actual.origin), isOriginPaused(actual.origin)]);
       return { hasProfile: profile !== null, paused };
     }
+    case "GET_ACTIVE_PROFILE": {
+      const actual = await currentContext();
+      return getProfile(actual.origin);
+    }
+    case "VALIDATE_SHARED_DESIGN":
+      return validateSharedDesign(message.design);
     case "SET_SITE_PAUSED": {
       const actual = await currentContext();
       assertSamePageContext(actual, message.context);
@@ -149,18 +186,20 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
       return { hasProfile: (await getProfile(actual.origin)) !== null, paused: message.paused };
     }
     case "GENERATE_PROPOSAL": {
-      const config = await getProviderConfig();
-      if (!config) throw new Error("Save your AI provider, model, and API key first.");
       const actual = await currentContext();
       assertSamePageContext(actual, message.snapshot.context);
+      const localProposal = proposalFromSupportedIntent(message.request, message.history);
+      if (localProposal) return { proposal: localProposal, context: actual, source: "local" };
+      const config = await getProviderConfig();
+      if (!config) throw new Error("Save your AI provider, model, and API key first.");
       requests.get(actual.tabId)?.abort();
       const controller = new AbortController();
       requests.set(actual.tabId, controller);
       try {
-        const proposal = await generateProposal(config, message.request, message.snapshot, controller.signal);
+        const proposal = await generateProposal(config, message.request, message.snapshot, message.history, controller.signal, message.basePatch);
         const latest = await currentContext();
         assertSamePageContext(latest, actual);
-        return { proposal, context: latest };
+        return { proposal, context: latest, source: "provider" };
       } finally {
         if (requests.get(actual.tabId) === controller) requests.delete(actual.tabId);
       }
@@ -168,9 +207,16 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
     case "APPLY_PREVIEW": {
       const actual = await currentContext();
       assertSamePageContext(actual, message.context);
-      const response = await chrome.tabs.sendMessage(actual.tabId, { type: "CONTENT_APPLY", context: actual, patch: message.proposal.patch, mode: "preview" } satisfies ExtensionMessage) as MessageResult;
+      const response = await chrome.tabs.sendMessage(actual.tabId, {
+        type: "CONTENT_APPLY",
+        context: actual,
+        patch: message.proposal.patch,
+        mode: "preview",
+        ...(message.proposal.resetFields?.length ? { resetFields: message.proposal.resetFields } : {}),
+      } satisfies ExtensionMessage) as MessageResult<ApplyReport>;
       if (!response.ok) throw new Error(response.error ?? "Preview failed.");
-      return true;
+      if (!response.data) throw new Error("The page did not report what changed.");
+      return response.data;
     }
     case "REVERT_PREVIEW": {
       const actual = await currentContext();
@@ -195,11 +241,18 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
         updatedAt: now,
         schemaVersion: 1,
       };
+      const response = await chrome.tabs.sendMessage(actual.tabId, {
+        type: "CONTENT_APPLY",
+        context: actual,
+        patch: profile.patch,
+        mode: "approved",
+        ...(message.proposal.resetFields?.length ? { resetFields: message.proposal.resetFields } : {}),
+      } satisfies ExtensionMessage) as MessageResult<ApplyReport>;
+      if (!response.ok || !response.data) throw new Error(response.error ?? "The approved profile could not be applied.");
       await saveProfile(profile);
       await setOriginPaused(actual.origin, false);
       await registerOrigin(actual.origin);
-      await chrome.tabs.sendMessage(actual.tabId, { type: "CONTENT_APPLY", context: actual, patch: profile.patch, mode: "approved" } satisfies ExtensionMessage);
-      return profile;
+      return { profile, report: response.data };
     }
     case "TRANSCRIBE_AUDIO": {
       const config = await getProviderConfig();

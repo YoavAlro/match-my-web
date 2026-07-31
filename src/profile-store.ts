@@ -1,4 +1,5 @@
 import type { ProviderConfig, SiteProfile } from "./types";
+import { validatePatch } from "./validation";
 
 const PROFILE_KEY = "profiles.v1";
 const PROVIDER_KEY = "provider.v1";
@@ -7,7 +8,12 @@ const PAUSED_KEY = "paused-origins.v1";
 export async function getProfiles(): Promise<Record<string, SiteProfile>> {
   const stored = await chrome.storage.local.get(PROFILE_KEY);
   const value = stored[PROFILE_KEY];
-  return value && typeof value === "object" ? (value as Record<string, SiteProfile>) : {};
+  if (!value || typeof value !== "object") return {};
+  const profiles = value as Record<string, SiteProfile>;
+  return Object.fromEntries(Object.entries(profiles).map(([origin, profile]) => [origin, {
+    ...profile,
+    patch: validatePatch(profile.patch),
+  }]));
 }
 
 export async function getProfile(origin: string): Promise<SiteProfile | null> {

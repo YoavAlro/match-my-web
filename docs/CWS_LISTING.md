@@ -2,7 +2,7 @@
 
 ## Name
 
-Match My Web
+Tweaksy
 
 ## Short description
 
@@ -10,15 +10,17 @@ Describe, preview, and save private visual website adaptations using your own AI
 
 ## Detailed description
 
-Match My Web helps you make websites fit the way you read, focus, and navigate.
+Tweaksy helps you make websites fit the way you read, focus, and navigate.
 
-Describe what would help in plain language or record a short request. Match My Web inspects only the page you explicitly permit, asks your own AI provider for a constrained visual suggestion, and shows you exactly what would change. Nothing is applied until you preview it. Nothing becomes permanent until you approve it.
+The web, shaped for you.
+
+Describe what would help in plain language or record a short request. Tweaksy inspects only the page you explicitly permit, asks your own AI provider for a constrained visual suggestion, and shows you exactly what would change. Nothing is applied until you preview it. Nothing becomes permanent until you approve it.
 
 Approved profiles stay on your device and can return after reloads, navigation, and browser restarts. The extension supports modern sites that use shadow DOM and blocks late AI responses from affecting a page you have already left.
 
 Privacy by design:
 
-- No Match My Web account or developer-operated server.
+- No Tweaksy account or developer-operated server.
 - Your own OpenAI, Azure OpenAI, or Anthropic provider, model/deployment, and API key.
 - No analytics, advertising, or data sale.
 - Temporary current-page access by default.
@@ -26,7 +28,7 @@ Privacy by design:
 - No AI-generated scripts, HTML, or arbitrary CSS.
 - Reversible previews and a clear approval step.
 
-Match My Web is designed to complement—not replace—browser zoom, screen readers, and website accessibility work.
+Tweaksy is designed to complement—not replace—browser zoom, screen readers, and website accessibility work.
 
 ## Single purpose
 

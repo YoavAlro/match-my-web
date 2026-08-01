@@ -1,6 +1,6 @@
 import { buildAdaptationCss } from "./adaptation-css";
-import { isSponsoredMarker, isSponsoredMetadata } from "./feed-filter";
-import type { AdaptationPatch, ApplyReport, ExtensionMessage, MessageResult, PageContext, PageSnapshot, SiteProfile } from "./types";
+import { domSignalRelevance, isSponsoredMarker, isSponsoredMetadata } from "./feed-filter";
+import type { AdaptationPatch, ApplyReport, AutomationAsset, ExtensionMessage, MessageResult, PageContext, PageSnapshot, SiteProfile } from "./types";
 
 declare global {
   interface Window { __MATCH_MY_WEB_CONTENT__?: boolean; }
@@ -18,6 +18,7 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
   const changedColors = new Map<StyledElement, Map<string, SavedDeclaration>>();
   let colorObserver: MutationObserver | null = null;
   let feedFilterObserver: MutationObserver | null = null;
+  let feedFilterTimer: number | null = null;
   let navigationObserver: MutationObserver | null = null;
   let activeDeck: HTMLElement | null = null;
   let activeDeckRestorers: Array<() => void> = [];
@@ -79,9 +80,10 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       affectedElements += remapped;
       details.push(`Remapped red interface colors on ${remapped} element${remapped === 1 ? "" : "s"}.`);
     }
-    if (patch?.hideSponsoredContent || patch?.hideVideoPosts || patch?.feedFilterTerms?.length) {
+    if (patch?.hideSponsoredContent || patch?.hideVideoPosts || patch?.feedFilterTerms?.length || patch?.automationAssets?.length) {
       const feedFilterTerms = patch.feedFilterTerms ?? [];
-      const hidden = applyFeedFilters(patch.hideSponsoredContent === true, patch.hideVideoPosts === true, feedFilterTerms);
+      const automationAssets = patch.automationAssets ?? [];
+      const hidden = applyFeedFilters(patch.hideSponsoredContent === true, patch.hideVideoPosts === true, feedFilterTerms, automationAssets);
       affectedElements += Math.max(1, hidden.total);
       if (patch.hideSponsoredContent) {
         details.push(`Enabled sponsored-content filtering; scanned ${hidden.scanned} feed container${hidden.scanned === 1 ? "" : "s"} and matched ${hidden.sponsored} sponsored item${hidden.sponsored === 1 ? "" : "s"}.`);
@@ -92,6 +94,12 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       }
       if (feedFilterTerms.length) {
         details.push(`Applied the observed feed marker rule for: ${feedFilterTerms.join(", ")}.`);
+      }
+      for (const asset of automationAssets) {
+        details.push(`Enabled automation “${asset.name}” on page load${asset.triggers.includes("dom-mutation") ? " and new page content" : ""}.`);
+      }
+      if (automationAssets.length) {
+        details.push(`Automation evidence matched ${hidden.automation} item${hidden.automation === 1 ? "" : "s"} currently on the page.`);
       }
     }
     if (patch && patch.themePreset && patch.themePreset !== "unchanged") {
@@ -111,6 +119,8 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
     colorObserver = null;
     feedFilterObserver?.disconnect();
     feedFilterObserver = null;
+    if (feedFilterTimer !== null) window.clearTimeout(feedFilterTimer);
+    feedFilterTimer = null;
     for (const [element, saved] of filteredFeedElements) {
       if (saved.value) element.style.setProperty("display", saved.value, saved.priority);
       else element.style.removeProperty("display");
@@ -749,7 +759,86 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
     return values.some((value) => terms.has(value.normalize("NFKC").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")));
   }
 
-  function hideFilteredItemsIn(root: ParentNode, hideSponsored: boolean, hideVideo: boolean, terms: Set<string>): { sponsored: number; video: number; scanned: number } {
+  function nearestRepeatingAncestor(evidence: HTMLElement, fallback: HTMLElement): HTMLElement {
+    let current: HTMLElement | null = fallback;
+    for (let depth = 0; current?.parentElement && depth < 12; depth += 1) {
+      const parent: HTMLElement = current.parentElement;
+      if (parent.matches("body, main, [role='main']")) break;
+      const siblings = Array.from(parent.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+      const feedLikeSiblings = siblings.filter((sibling) => sibling.matches(FEED_ITEM_SELECTOR) || sibling.querySelector(FEED_ITEM_SELECTOR));
+      if (siblings.length >= 2 && feedLikeSiblings.length >= 2) return current;
+      current = parent;
+    }
+    return fallback;
+  }
+
+  function evidenceClusterContainer(evidence: HTMLElement, evidenceNodes: HTMLElement[], fallback: HTMLElement): HTMLElement {
+    if (evidenceNodes.length < 3) return nearestRepeatingAncestor(evidence, fallback);
+    let current: HTMLElement | null = evidence;
+    for (let depth = 0; current && depth < 16; depth += 1) {
+      if (current.matches("html, body, main, [role='main'], nav, [role='navigation'], form, dialog, [role='dialog']")) break;
+      let contained = 0;
+      for (const node of evidenceNodes) {
+        if (current.contains(node)) contained += 1;
+        if (contained >= 3) return current;
+      }
+      current = current.parentElement;
+    }
+    return nearestRepeatingAncestor(evidence, fallback);
+  }
+
+  function automationContainer(evidence: HTMLElement, strategy: AutomationAsset["container"], evidenceNodes: HTMLElement[]): HTMLElement {
+    const feedItem = evidence.closest<HTMLElement>(FEED_ITEM_SELECTOR);
+    const fallback = feedItem ?? feedContainer(evidence);
+    if (strategy === "evidence-cluster") return evidenceClusterContainer(evidence, evidenceNodes, fallback);
+    return strategy === "nearest-repeating-ancestor" ? nearestRepeatingAncestor(evidence, fallback) : fallback;
+  }
+
+  function hideFilteredElement(element: HTMLElement): boolean {
+    if (filteredFeedElements.has(element) || element.contains(document.activeElement)) return false;
+    filteredFeedElements.set(element, {
+      value: element.style.getPropertyValue("display"),
+      priority: element.style.getPropertyPriority("display"),
+    });
+    element.dataset.mmwFeedHidden = "true";
+    element.style.setProperty("display", "none", "important");
+    return true;
+  }
+
+  function automationEvidenceIn(root: ParentNode, asset: AutomationAsset): HTMLElement[] {
+    const evidence = new Set<HTMLElement>();
+    const addMatchingRoot = (selector: string): void => {
+      if (root instanceof HTMLElement && root.matches(selector)) evidence.add(root);
+      for (const element of root.querySelectorAll<HTMLElement>(selector)) evidence.add(element);
+    };
+    for (const attribute of asset.evidence.attributes) {
+      if (/^(?:aria-[a-z][\w-]*|data-[a-z][\w-]*|attributionsrc)$/.test(attribute)) addMatchingRoot(`[${attribute}]`);
+    }
+    for (const tag of asset.evidence.descendantTags) addMatchingRoot(tag);
+    if (asset.evidence.text.length) {
+      const terms = new Set(asset.evidence.text.map((term) => term.normalize("NFKC").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")));
+      for (const item of feedItemsIn(root)) {
+        if (itemMatchesObservedTerms(item, terms)) evidence.add(item);
+      }
+    }
+    return [...evidence].slice(0, 1000);
+  }
+
+  function runAutomationAssetsIn(root: ParentNode, assets: AutomationAsset[]): number {
+    const matched = new Set<HTMLElement>();
+    for (const asset of assets) {
+      const evidenceNodes = automationEvidenceIn(root, asset);
+      for (const evidence of evidenceNodes) {
+        const target = automationContainer(evidence, asset.container, evidenceNodes);
+        if (target.matches("html, body, main, [role='main'], nav, [role='navigation'], form, dialog, [role='dialog']")) continue;
+        matched.add(target);
+      }
+    }
+    for (const target of matched) hideFilteredElement(target);
+    return matched.size;
+  }
+
+  function hideFilteredItemsIn(root: ParentNode, hideSponsored: boolean, hideVideo: boolean, terms: Set<string>, assets: AutomationAsset[]): { sponsored: number; video: number; automation: number; scanned: number } {
     let sponsored = 0;
     let video = 0;
     const items = feedItemsIn(root);
@@ -759,19 +848,18 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       if (sponsoredMatch) sponsored += 1;
       if (videoMatch) video += 1;
       if ((!sponsoredMatch && !videoMatch) || filteredFeedElements.has(item) || item.contains(document.activeElement)) continue;
-      filteredFeedElements.set(item, {
-        value: item.style.getPropertyValue("display"),
-        priority: item.style.getPropertyPriority("display"),
-      });
-      item.dataset.mmwFeedHidden = "true";
-      item.style.setProperty("display", "none", "important");
+      hideFilteredElement(item);
     }
-    return { sponsored, video, scanned: items.length };
+    return { sponsored, video, automation: runAutomationAssetsIn(root, assets), scanned: items.length };
   }
 
-  function applyFeedFilters(hideSponsored: boolean, hideVideo: boolean, feedFilterTerms: string[]): { sponsored: number; video: number; scanned: number; total: number } {
+  function applyFeedFilters(hideSponsored: boolean, hideVideo: boolean, feedFilterTerms: string[], automationAssets: AutomationAsset[]): { sponsored: number; video: number; automation: number; scanned: number; total: number } {
     const terms = new Set(feedFilterTerms.map((term) => term.normalize("NFKC").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")));
-    const initial = hideFilteredItemsIn(document, hideSponsored, hideVideo, terms);
+    const pageReadyAssets = automationAssets.filter((asset) => asset.triggers.includes("page-ready"));
+    const mutationAssets = automationAssets.filter((asset) => asset.triggers.includes("dom-mutation"));
+    const localMutationAssets = mutationAssets.filter((asset) => asset.container !== "evidence-cluster");
+    const clusterMutationAssets = mutationAssets.filter((asset) => asset.container === "evidence-cluster");
+    const initial = hideFilteredItemsIn(document, hideSponsored, hideVideo, terms, pageReadyAssets);
     feedFilterObserver = new MutationObserver((records) => {
       const roots = new Set<HTMLElement>();
       for (const record of records) {
@@ -790,11 +878,23 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
           if (node instanceof HTMLElement) roots.add(node.closest<HTMLElement>(`${SEMANTIC_FEED_WRAPPER_SELECTOR}, ${FEED_ITEM_SELECTOR}`) ?? node);
         }
       }
-      for (const root of [...roots].slice(0, 200)) hideFilteredItemsIn(root, hideSponsored, hideVideo, terms);
+      for (const root of [...roots].slice(0, 200)) hideFilteredItemsIn(root, hideSponsored, hideVideo, terms, localMutationAssets);
+      const clusterAttributes = new Set(clusterMutationAssets.flatMap((asset) => asset.evidence.attributes));
+      const clusterMayHaveChanged = clusterMutationAssets.length > 0 && records.some((record) =>
+        (record.type === "childList" && record.addedNodes.length > 0)
+        || (record.type === "attributes" && !!record.attributeName && clusterAttributes.has(record.attributeName)));
+      if (clusterMayHaveChanged) {
+        if (feedFilterTimer !== null) window.clearTimeout(feedFilterTimer);
+        feedFilterTimer = window.setTimeout(() => {
+          feedFilterTimer = null;
+          runAutomationAssetsIn(document, clusterMutationAssets);
+        }, 100);
+      }
     });
+    const automationAttributes = mutationAssets.flatMap((asset) => asset.evidence.attributes);
     feedFilterObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["aria-label", "title", "data-content", "attributionsrc", "style", "class"],
+      attributeFilter: [...new Set(["aria-label", "title", "data-content", "attributionsrc", "style", "class", ...automationAttributes])],
       childList: true,
       characterData: true,
       subtree: true,
@@ -893,6 +993,44 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       .map(({ text, source, occurrences }) => ({ text, source, occurrences }));
   }
 
+  function discoverDomSignals(request = ""): NonNullable<PageSnapshot["domSignals"]> {
+    const counts = new Map<string, number>();
+    const safeAttribute = /^(?:aria-[a-z][\w-]*|data-[a-z][\w-]*|attributionsrc)$/;
+    const elements = new Set<HTMLElement>();
+    for (const item of feedItemsIn(document).slice(0, 80)) {
+      elements.add(item);
+      for (const element of Array.from(item.querySelectorAll<HTMLElement>("*")).slice(0, 500)) elements.add(element);
+    }
+    // Semantic evidence can sit outside recognized feed items when a page omits
+    // article/feed roles. Inspect attribute names only (never their values) so
+    // request-relevant structure can still be proposed through the safe DSL.
+    for (const element of Array.from(document.querySelectorAll<HTMLElement>("*")).slice(0, 12_000)) {
+      if (Array.from(element.attributes).some((attribute) =>
+        safeAttribute.test(attribute.name.toLowerCase())
+        && domSignalRelevance(attribute.name, request) !== "structural")) {
+        elements.add(element);
+      }
+    }
+    for (const element of elements) {
+      for (const attribute of Array.from(element.attributes)) {
+        const name = attribute.name.toLowerCase();
+        if (safeAttribute.test(name)) counts.set(name, (counts.get(name) ?? 0) + 1);
+      }
+    }
+    const signals: NonNullable<PageSnapshot["domSignals"]> = [...counts]
+      .map(([name, occurrences]) => ({ kind: "attribute-presence" as const, name, occurrences, relevance: domSignalRelevance(name, request) }))
+      .sort((left, right) => {
+        const priority = { "request-match": 2, "content-marker": 1, structural: 0 } as const;
+        return priority[right.relevance] - priority[left.relevance]
+          || left.occurrences - right.occurrences
+          || left.name.localeCompare(right.name);
+      })
+      .slice(0, 40);
+    const videos = document.querySelectorAll("video").length;
+    if (videos) signals.push({ kind: "descendant-tag", name: "video", occurrences: videos, relevance: domSignalRelevance("video", request) });
+    return signals;
+  }
+
   function snapshot(request?: string): PageSnapshot {
     return {
       context: context(),
@@ -901,6 +1039,7 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       controls: uniqueText("button, a[href], summary, [role='button'], [role='link'], input:not([type='password']), select, textarea", 100),
       text: visibleTextExcerpt(),
       feedPatterns: discoverFeedPatterns(request),
+      domSignals: discoverDomSignals(request),
     };
   }
 

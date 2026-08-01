@@ -22,6 +22,33 @@ export interface ChatTurn {
   content: string;
 }
 
+export type AutomationTrigger = "page-ready" | "dom-mutation";
+export type AutomationContainerStrategy = "nearest-feed-item" | "nearest-repeating-ancestor" | "evidence-cluster";
+export type DomAutomationSkillId =
+  | "semantic-attribute-evidence"
+  | "exact-text-evidence"
+  | "descendant-element-evidence"
+  | "nearest-semantic-container"
+  | "evidence-cluster-container"
+  | "repeating-ancestor-container"
+  | "dynamic-content-trigger";
+
+export interface DomFilterAutomationAsset {
+  type: "dom-filter";
+  name: string;
+  skills: DomAutomationSkillId[];
+  triggers: AutomationTrigger[];
+  evidence: {
+    text: string[];
+    attributes: string[];
+    descendantTags: Array<"video">;
+  };
+  container: AutomationContainerStrategy;
+  action: "hide";
+}
+
+export type AutomationAsset = DomFilterAutomationAsset;
+
 export interface AdaptationPatch {
   fontScale: number | null;
   lineHeight: number | null;
@@ -41,6 +68,7 @@ export interface AdaptationPatch {
   hideSponsoredContent: boolean;
   hideVideoPosts: boolean;
   feedFilterTerms: string[];
+  automationAssets: AutomationAsset[];
   hideSelectors: string[];
 }
 
@@ -63,6 +91,7 @@ export const ADAPTATION_FIELDS = [
   "hideSponsoredContent",
   "hideVideoPosts",
   "feedFilterTerms",
+  "automationAssets",
   "hideSelectors",
 ] as const;
 
@@ -96,6 +125,12 @@ export interface PageSnapshot {
   controls: string[];
   text: string;
   feedPatterns?: Array<{ text: string; source: "rendered-text" | "aria-label" | "title" | "data-content"; occurrences: number }>;
+  domSignals?: Array<{
+    kind: "attribute-presence" | "descendant-tag";
+    name: string;
+    occurrences: number;
+    relevance: "request-match" | "content-marker" | "structural";
+  }>;
 }
 
 export interface SiteProfile {
@@ -120,11 +155,21 @@ export interface SharedDesign {
 export interface SiteStatus {
   hasProfile: boolean;
   paused: boolean;
+  shutdown: boolean;
+}
+
+export interface TweaksyToggleState {
+  origin: string | null;
+  siteDisabled: boolean;
+  shutdown: boolean;
 }
 
 export type ExtensionMessage =
   | { type: "GET_ACTIVE_CONTEXT" }
   | { type: "GET_ACTIVE_TAB_ID" }
+  | { type: "GET_TWEAKSY_TOGGLE_STATE" }
+  | { type: "SET_ACTIVE_SITE_DISABLED"; disabled: boolean }
+  | { type: "SET_GLOBAL_DISABLED"; disabled: boolean }
   | { type: "REQUEST_ACTIVE_SITE_ACCESS" }
   | { type: "INSPECT_ACTIVE_PAGE"; request?: string }
   | { type: "GET_PROVIDER_CONFIG" }
@@ -170,6 +215,7 @@ export const DEFAULT_PATCH: AdaptationPatch = {
   hideSponsoredContent: false,
   hideVideoPosts: false,
   feedFilterTerms: [],
+  automationAssets: [],
   hideSelectors: [],
 };
 
@@ -192,5 +238,6 @@ export function hasAdaptationChanges(patch: AdaptationPatch): boolean {
     || patch.hideSponsoredContent
     || patch.hideVideoPosts
     || (patch.feedFilterTerms?.length ?? 0) > 0
+    || (patch.automationAssets?.length ?? 0) > 0
     || patch.hideSelectors.length > 0;
 }

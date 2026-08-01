@@ -66,6 +66,53 @@ describe("adaptation validation", () => {
     expect(validatePatch({ feedFilterTerms: [" Sponsored ", "<script>", "x" ] }).feedFilterTerms).toEqual(["Sponsored"]);
   });
 
+  it("accepts bounded declarative DOM automations without accepting scripts or sensitive selectors", () => {
+    const patch = validatePatch({
+      automationAssets: [{
+        type: "dom-filter",
+        name: "Hide attributed feed items",
+        triggers: ["page-ready", "dom-mutation", "timer"],
+        evidence: {
+          text: [" Sponsored ", "<script>"],
+          attributes: ["attributionsrc", "data-ad-marker", "href", "onclick"],
+          descendantTags: ["video", "script"],
+        },
+        container: "nearest-feed-item",
+        action: "hide",
+        code: "document.body.remove()",
+      }],
+    });
+    expect(patch.automationAssets).toEqual([{
+      type: "dom-filter",
+      name: "Hide attributed feed items",
+      skills: [
+        "semantic-attribute-evidence",
+        "exact-text-evidence",
+        "descendant-element-evidence",
+        "nearest-semantic-container",
+        "dynamic-content-trigger",
+      ],
+      triggers: ["page-ready", "dom-mutation"],
+      evidence: { text: ["Sponsored"], attributes: ["attributionsrc", "data-ad-marker"], descendantTags: ["video"] },
+      container: "nearest-feed-item",
+      action: "hide",
+    }]);
+  });
+
+  it("accepts the evidence-cluster relationship for repeated semantic markers", () => {
+    const patch = validatePatch({
+      automationAssets: [{
+        type: "dom-filter",
+        name: "Hide semantic ad cards",
+        triggers: ["page-ready", "dom-mutation"],
+        evidence: { text: [], attributes: ["data-ad-rendering-role"], descendantTags: [] },
+        container: "evidence-cluster",
+        action: "hide",
+      }],
+    });
+    expect(patch.automationAssets[0]?.container).toBe("evidence-cluster");
+  });
+
   it("accepts safe heading colors and rejects executable CSS-like values", () => {
     expect(validatePatch({ headingColor: "blue" }).headingColor).toBe("blue");
     expect(validatePatch({ headingColor: "#1d4ed8" }).headingColor).toBe("#1d4ed8");

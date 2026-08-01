@@ -59,6 +59,21 @@ describe("incremental adaptation patches", () => {
     expect(mergeAdaptationPatches(base, DEFAULT_PATCH, ["feedFilterTerms"]).feedFilterTerms).toEqual([]);
   });
 
+  it("persists declarative automation assets and supports explicit reset", () => {
+    const asset = {
+      type: "dom-filter" as const,
+      name: "Hide attributed items",
+      skills: ["semantic-attribute-evidence" as const, "nearest-semantic-container" as const, "dynamic-content-trigger" as const],
+      triggers: ["page-ready" as const, "dom-mutation" as const],
+      evidence: { text: [], attributes: ["attributionsrc"], descendantTags: [] },
+      container: "nearest-feed-item" as const,
+      action: "hide" as const,
+    };
+    const base = { ...DEFAULT_PATCH, automationAssets: [asset] };
+    expect(mergeAdaptationPatches(base, DEFAULT_PATCH).automationAssets).toEqual([asset]);
+    expect(mergeAdaptationPatches(base, DEFAULT_PATCH, ["automationAssets"]).automationAssets).toEqual([]);
+  });
+
   it("accepts a deck-control-only delta over an existing deck", () => {
     const base = { ...DEFAULT_PATCH, articleLayout: "swipe-cards" as const };
     const delta = { ...DEFAULT_PATCH, deckControls: "sides" as const };

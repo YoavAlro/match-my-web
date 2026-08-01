@@ -30,6 +30,13 @@ export function mergeAdaptationPatches(basePatch: AdaptationPatch | null, delta:
     : deltaFeedFilterTerms.length
       ? [...new Set([...baseFeedFilterTerms, ...deltaFeedFilterTerms])].slice(0, 8)
       : [...baseFeedFilterTerms];
+  const baseAutomationAssets = base.automationAssets ?? [];
+  const deltaAutomationAssets = delta.automationAssets ?? [];
+  const automationAssets = reset.has("automationAssets")
+    ? []
+    : deltaAutomationAssets.length
+      ? [...new Map([...baseAutomationAssets, ...deltaAutomationAssets].map((asset) => [JSON.stringify(asset), asset])).values()].slice(0, 8)
+      : [...baseAutomationAssets];
 
   return {
     fontScale: number("fontScale"),
@@ -50,6 +57,7 @@ export function mergeAdaptationPatches(basePatch: AdaptationPatch | null, delta:
     hideSponsoredContent: reset.has("hideSponsoredContent") ? false : delta.hideSponsoredContent === true || base.hideSponsoredContent === true,
     hideVideoPosts: reset.has("hideVideoPosts") ? false : delta.hideVideoPosts === true || base.hideVideoPosts === true,
     feedFilterTerms,
+    automationAssets,
     hideSelectors,
   };
 }

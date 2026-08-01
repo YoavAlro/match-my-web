@@ -40,3 +40,12 @@ export function isSponsoredMetadata(value: string | null | undefined): boolean {
   if (NORMALIZED_SPONSORED_LABELS.has(normalized)) return true;
   return [...NORMALIZED_SPONSORED_LABELS].some((label) => normalized.startsWith(label) && normalized.length <= label.length + 32);
 }
+
+export function domSignalRelevance(name: string, request = ""): "request-match" | "content-marker" | "structural" {
+  const tokens = name.normalize("NFKC").toLocaleLowerCase().split(/[^\p{L}\p{N}]+/gu).filter(Boolean);
+  const requestTokens = (request.normalize("NFKC").toLocaleLowerCase().match(/[\p{L}\p{N}]{2,}/gu) ?? [])
+    .flatMap((token) => token.length >= 3 && token.endsWith("s") ? [token, token.slice(0, -1)] : [token]);
+  if (tokens.some((token) => requestTokens.includes(token))) return "request-match";
+  if (tokens.some((token) => isSponsoredMarker(token))) return "content-marker";
+  return "structural";
+}

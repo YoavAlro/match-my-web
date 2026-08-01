@@ -4,6 +4,7 @@ import { validatePatch } from "./validation";
 const PROFILE_KEY = "profiles.v1";
 const PROVIDER_KEY = "provider.v1";
 const PAUSED_KEY = "paused-origins.v1";
+const SHUTDOWN_KEY = "shutdown.v1";
 
 export async function getProfiles(): Promise<Record<string, SiteProfile>> {
   const stored = await chrome.storage.local.get(PROFILE_KEY);
@@ -49,4 +50,13 @@ export async function setOriginPaused(origin: string, value: boolean): Promise<v
   if (value) paused[origin] = true;
   else delete paused[origin];
   await chrome.storage.local.set({ [PAUSED_KEY]: paused });
+}
+
+export async function isGloballyDisabled(): Promise<boolean> {
+  const stored = await chrome.storage.local.get(SHUTDOWN_KEY);
+  return stored[SHUTDOWN_KEY] === true;
+}
+
+export async function setGloballyDisabled(value: boolean): Promise<void> {
+  await chrome.storage.local.set({ [SHUTDOWN_KEY]: value });
 }

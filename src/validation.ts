@@ -1,4 +1,5 @@
-import { ADAPTATION_FIELDS, hasAdaptationChanges, type AdaptationField, type AdaptationPatch, type Proposal, type ProviderConfig, type SharedDesign } from "./types";
+import { ADAPTATION_FIELDS, hasAdaptationChanges, type AdaptationField, type AdaptationPatch, type AutomationAsset, type AutomationTrigger, type Proposal, type ProviderConfig, type SharedDesign } from "./types";
+import { deriveDomAutomationSkills } from "./dom-agent-skills";
 
 const FORBIDDEN_SELECTOR = /(?:url\s*\(|@import|javascript:|data:|\[[^\]]*(?:value|src|href)\s*[*^$|~]?=|:has\s*\()/i;
 const SAFE_SELECTOR = /^(?:[.#]?[a-zA-Z][\w-]*|\[[a-zA-Z][\w-]*(?:=["']?[\w -]+["']?)?\])(?:[ >+~:.#\[\]="'()\w-])*$/;
@@ -6,6 +7,62 @@ const ESSENTIAL_SELECTOR = /(?:\[role\s*=|(?:^|[\s>+~,(])(?:html|body|main|nav|h
 const SAFE_NAMED_COLORS = new Set([
   "black", "white", "gray", "grey", "red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "navy", "teal", "maroon",
 ]);
+const SAFE_EVIDENCE_ATTRIBUTE = /^(?:aria-[a-z][\w-]*|data-[a-z][\w-]*|attributionsrc)$/;
+
+function sanitizeEvidenceText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.normalize("NFKC").replace(/\s+/g, " ").trim();
+  if (text.length < 2 || text.length > 48 || /[<>{};]|(?:javascript|data):/i.test(text)) return null;
+  return text;
+}
+
+function validateAutomationAssets(input: unknown): AutomationAsset[] {
+  if (!Array.isArray(input)) return [];
+  const assets: AutomationAsset[] = [];
+  const seen = new Set<string>();
+  for (const item of input.slice(0, 12)) {
+    if (!item || typeof item !== "object") continue;
+    const value = item as Record<string, unknown>;
+    if (value.type !== "dom-filter" || value.action !== "hide") continue;
+    const evidenceValue = value.evidence && typeof value.evidence === "object"
+      ? value.evidence as Record<string, unknown>
+      : {};
+    const text = Array.isArray(evidenceValue.text)
+      ? [...new Set(evidenceValue.text.map(sanitizeEvidenceText).filter((entry): entry is string => entry !== null))].slice(0, 8)
+      : [];
+    const attributes = Array.isArray(evidenceValue.attributes)
+      ? [...new Set(evidenceValue.attributes
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((entry) => entry.trim().toLowerCase())
+        .filter((entry) => SAFE_EVIDENCE_ATTRIBUTE.test(entry)))].slice(0, 8)
+      : [];
+    const descendantTags = Array.isArray(evidenceValue.descendantTags) && evidenceValue.descendantTags.includes("video")
+      ? ["video" as const]
+      : [];
+    if (!text.length && !attributes.length && !descendantTags.length) continue;
+    const requestedTriggers = Array.isArray(value.triggers) ? value.triggers : [];
+    const triggers = [...new Set(requestedTriggers.filter((entry): entry is "page-ready" | "dom-mutation" => entry === "page-ready" || entry === "dom-mutation"))];
+    const normalizedTriggers: AutomationTrigger[] = triggers.length ? triggers : ["page-ready", "dom-mutation"];
+    const container = value.container === "nearest-repeating-ancestor" || value.container === "evidence-cluster" ? value.container : "nearest-feed-item";
+    const evidence = { text, attributes, descendantTags };
+    const asset: AutomationAsset = {
+      type: "dom-filter",
+      name: typeof value.name === "string" && value.name.trim() ? value.name.trim().slice(0, 80) : "Hide matching page items",
+      skills: deriveDomAutomationSkills({ evidence, container, triggers: normalizedTriggers }),
+      triggers: normalizedTriggers,
+      evidence,
+      container,
+      action: "hide",
+    };
+    const key = JSON.stringify(asset);
+    if (!seen.has(key)) {
+      seen.add(key);
+      assets.push(asset);
+    }
+    if (assets.length >= 8) break;
+  }
+  return assets;
+}
 
 export function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value)
@@ -69,6 +126,7 @@ export function validatePatch(input: unknown): AdaptationPatch {
     hideSponsoredContent: value.hideSponsoredContent === true,
     hideVideoPosts: value.hideVideoPosts === true,
     feedFilterTerms: [...new Set(feedFilterTerms)],
+    automationAssets: validateAutomationAssets(value.automationAssets),
     hideSelectors: [...new Set(selectors)],
   };
 }

@@ -43,6 +43,7 @@ if (!window.__MATCH_MY_WEB_SHADOW_HOOK__) {
       feedFilterTerms: Array.isArray(input.feedFilterTerms)
         ? input.feedFilterTerms.filter((item): item is string => typeof item === "string").slice(0, 8)
         : [],
+      automationAssets: [],
       hideSelectors: Array.isArray(input.hideSelectors)
         ? input.hideSelectors.filter((item): item is string => typeof item === "string" && /^[.#a-zA-Z][\w .#>+~:-]*$/.test(item)).slice(0, 12)
         : [],

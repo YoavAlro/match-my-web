@@ -8,10 +8,13 @@ Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person descr
 - Sends a bounded, value-free page snapshot only when the user chooses **Generate preview**.
 - Uses the user's OpenAI, Azure OpenAI, Anthropic, TokenRouter, OpenRouter, or Google Gemini account, model/deployment, and API key.
 - Accepts a small declarative adaptation schema—never AI-generated JavaScript, HTML, remote code, or raw CSS.
+- Supports reviewed, origin-scoped DOM-filter automation assets that bind exact observed evidence to packaged actions, run on page load and infinite-feed mutations, and remain previewable, reversible, pausable, and locally persisted.
+- Composes those assets from a portable, audited DOM-skill catalog—semantic attributes, exact markers, descendant evidence, semantic containers, evidence clusters, repeating ancestors, and dynamic-content triggers—without website recipes or generated class names.
 - Includes a packaged, reversible filter for sponsored feed items, including rendered/accessibility labels, localized or split-letter markers, and standard attribution metadata; providers can enable it but cannot supply executable filtering code.
 - Includes a separate packaged, reversible filter for feed posts containing actual video elements.
-- For unfamiliar feed filtering, sends a bounded list of observed DOM marker patterns to the configured provider; the provider may select only exact observed terms, and Tweaksy executes them through a validated site-agnostic rule engine.
-- Remembers at most 12 chat turns per browser tab in session storage and refreshes page context when the active tab changes.
+- For unfamiliar feed filtering, sends bounded observed DOM marker and structure signals to the configured provider; the provider may select only exact observed evidence, and Tweaksy executes it through a validated site-agnostic rule engine.
+- Remembers at most 12 chat turns per browser tab in session storage, keeps in-flight generation bound to its originating tab while the user browses elsewhere, and restores its thinking or completed proposal state on return.
+- Uses the toolbar popup as a fast off switch: disable only the current origin or shut Tweaksy down everywhere, immediately clear active adaptations, and show the off state with a grayscale toolbar icon. Re-enabling restores eligible saved profiles.
 - Supports deterministic headline colors, a full-page article deck with touch swiping, mouse dragging, keyboard navigation, optional side controls, and reversible red-to-blue/teal interface-color remapping.
 - Recognizes visible social-feed posts for swipe decks, preserving author, text, and visible image/video media without a generic article button; post details open in a local accessible dialog with a link to the original conversation.
 - Keeps preview, measured application results, approval, and undo controls inside the chat instead of claiming an unverified action succeeded.
@@ -43,7 +46,7 @@ Load `dist/` as an unpacked extension:
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select this repository's `dist` folder.
-4. Pin Tweaksy, open a normal website, click the toolbar button, and choose **Open for this page**. This deliberate click grants temporary `activeTab` access for the current page.
+4. Pin Tweaksy, open a normal website, click the toolbar button, and choose **Open Tweaksy**. The same popup can turn Tweaksy off for the current site or shut it down globally. This deliberate click grants temporary `activeTab` access for the current page.
 
 The extension requests no site access at install time. Clicking the toolbar provides temporary `activeTab` access. Approving a profile prompts for persistent access to that single origin.
 

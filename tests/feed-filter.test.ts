@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSponsoredMarker, isSponsoredMetadata, normalizeFeedMarker } from "../src/feed-filter";
+import { domSignalRelevance, isSponsoredMarker, isSponsoredMetadata, normalizeFeedMarker } from "../src/feed-filter";
 
 describe("feed filtering markers", () => {
   it("recognizes rendered split-letter and localized sponsorship labels", () => {
@@ -20,6 +20,12 @@ describe("feed filtering markers", () => {
 
   it("normalizes compatibility characters and punctuation", () => {
     expect(normalizeFeedMarker("Ｓｐｏｎｓｏｒｅｄ ·")).toBe("sponsored");
+  });
+
+  it("ranks semantic and request-matching DOM attributes above generic structure", () => {
+    expect(domSignalRelevance("data-ad-rendering-role", "hide ads")).toBe("request-match");
+    expect(domSignalRelevance("data-sponsored-unit")).toBe("content-marker");
+    expect(domSignalRelevance("data-visualcompletion", "hide ads")).toBe("structural");
   });
 
 });

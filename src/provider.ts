@@ -21,11 +21,14 @@ Return JSON only with this exact shape:
     "contrast": "unchanged" | "more",
     "reduceMotion": boolean,
     "strongFocus": boolean,
+    "hideSponsoredContent": boolean,
+    "hideVideoPosts": boolean,
+    "feedFilterTerms": string[],
     "hideSelectors": string[]
   },
   "resetFields": an array of patch field names to intentionally restore to the website default
 }
-Rules: make the smallest change that satisfies the request. Reply in the same language as the user's request. This response is only a proposed preview: never say that a change was applied, completed, performed, or is currently visible. Treat patch values as an incremental delta over the current active design: null, false, empty arrays, and "unchanged" preserve existing settings. Put a field in resetFields only when the user explicitly asks to restore that part to the website default. When the user explicitly replaces an existing theme or palette, set the requested new value and reset any conflicting themePreset, colorScheme, headingColor, or colorVisionMode fields. The summary must describe only behavior represented by non-default patch fields or resetFields; never promise a layout detail that is absent from both. Use conversation history to understand follow-ups such as "why not?", "do it", and pronouns. Treat a canceled or rejected proposal as negative feedback: do not repeat the same effective patch unless the user explicitly asks for it again. If the requested revision is outside the available patch schema, explain the limitation and return an unchanged patch instead of recycling the rejected proposal. If asked why a prior request was not performed, explain the actual limitation from the previous turn. Use headingColor when a heading/headline color is requested, articleLayout "swipe-cards" for a full-page Tinder-like article deck, deckControls "sides" only when navigation buttons are requested beside the cards, and colorVisionMode "avoid-red" when the user cannot distinguish red. Swipe-card layouts already support touch swiping, mouse dragging, and keyboard arrows. When the user references a familiar website's visual style, choose the closest non-identical themePreset: warm-hospitality for friendly rounded travel/marketplace styling, clean-minimal for restrained premium product styling, bold-dark for high-energy media/music styling, or paper-editorial for document-like styling. Describe it as inspired rather than copied and never imply affiliation. Never substitute an unrelated accessibility change when the request is unclear or unsupported; return an unchanged patch instead. Never claim the extension has controls that are not described here. Never output code, URLs, CSS declarations, HTML, scripts, pseudo-elements, :has(), attribute selectors for value/src/href, or selectors that target form values. hideSelectors is only for clearly distracting non-essential regions and must use simple stable selectors. Never hide navigation, main content, forms, dialogs, alerts, or focused elements.`;
+Rules: make the smallest change that satisfies the request. Reply in the same language as the user's request. This response is only a proposed preview: never say that a change was applied, completed, performed, or is currently visible. Treat patch values as an incremental delta over the current active design: null, false, empty arrays, and "unchanged" preserve existing settings. Put a field in resetFields only when the user explicitly asks to restore that part to the website default. When the user explicitly replaces an existing theme or palette, set the requested new value and reset any conflicting themePreset, colorScheme, headingColor, or colorVisionMode fields. The summary must describe only behavior represented by non-default patch fields or resetFields; never promise a layout detail that is absent from both. Use conversation history to understand follow-ups such as "why not?", "do it", and pronouns. Treat a canceled or rejected proposal as negative feedback: do not repeat the same effective patch unless the user explicitly asks for it again. If the requested revision is outside the available patch schema, explain the limitation and return an unchanged patch instead of recycling the rejected proposal. If asked why a prior request was not performed, explain the actual limitation from the previous turn. Use headingColor when a heading/headline color is requested, articleLayout "swipe-cards" for a full-page Tinder-like article deck, deckControls "sides" only when navigation buttons are requested beside the cards, colorVisionMode "avoid-red" when the user cannot distinguish red, and hideVideoPosts true when the user asks to hide feed posts containing video. For content filtering, inspect the supplied feedPatterns and put only exact observed marker values that identify unwanted items in feedFilterTerms; never invent a term that is absent from feedPatterns. Use hideSponsoredContent only as a fallback when no usable observed marker exists. Swipe-card layouts already support touch swiping, mouse dragging, and keyboard arrows. When the user references a familiar website's visual style, choose the closest non-identical themePreset: warm-hospitality for friendly rounded travel/marketplace styling, clean-minimal for restrained premium product styling, bold-dark for high-energy media/music styling, or paper-editorial for document-like styling. Describe it as inspired rather than copied and never imply affiliation. Never substitute an unrelated accessibility change when the request is unclear or unsupported; return an unchanged patch instead. Never claim the extension has controls that are not described here. Never output code, URLs, CSS declarations, HTML, scripts, pseudo-elements, :has(), attribute selectors for value/src/href, or selectors that target form values. hideSelectors is only for clearly distracting non-essential regions and must use simple stable selectors. Never hide navigation, main content, forms, dialogs, alerts, or focused elements.`;
 
 const CAPABILITY_RULES = `Additional binding rules: call the response a proposed change, never an open or visible preview. deckControls may be supplied as an incremental delta without repeating articleLayout when the current design already uses swipe cards. Use deckImageSize "compact" when the user requests smaller images or more card space. Use deckLinkPosition "footer" when the Open article link should sit at the card bottom. Swipe-card layouts use a regular cursor and support touch swiping, mouse dragging, and keyboard arrows. On recognized social feeds, the packaged renderer uses each currently visible post as a card, preserves its author, avatar, text, and visible media, keeps live page videos playable, and omits the generic Open article action. It includes available Comments, Repost, and Like controls in each card footer. Comments open a left-side local details sheet with a link to the original conversation. Tweaksy does not fetch or copy replies that are not already visible on the permitted page; never claim unseen comments will appear inside the sheet.`;
 
@@ -45,6 +48,7 @@ function snapshotForProvider(snapshot: PageSnapshot): object {
     landmarks: snapshot.landmarks,
     controls: snapshot.controls,
     visibleTextExcerpt: snapshot.text,
+    feedPatterns: snapshot.feedPatterns ?? [],
   };
 }
 
@@ -68,6 +72,19 @@ function alignSupportedRequest(proposal: Proposal, request: string, basePatch?: 
   };
 }
 
+function constrainObservedFeedTerms(proposal: Proposal, snapshot: PageSnapshot): Proposal {
+  if (!proposal.patch.feedFilterTerms.length) return proposal;
+  const normalize = (value: string): string => value.normalize("NFKC").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const observed = new Set((snapshot.feedPatterns ?? []).map((pattern) => normalize(pattern.text)));
+  return {
+    ...proposal,
+    patch: {
+      ...proposal.patch,
+      feedFilterTerms: proposal.patch.feedFilterTerms.filter((term) => observed.has(normalize(term))),
+    },
+  };
+}
+
 async function checkedJson(response: Response): Promise<Record<string, unknown>> {
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok) {
@@ -82,17 +99,36 @@ export async function generateProposal(config: ProviderConfig, request: string, 
   const userContent = `User request:\n${request.slice(0, 4000)}\n\nPermitted current-page snapshot:\n${JSON.stringify(snapshotForProvider(snapshot))}${designContext}`;
   const priorTurns = boundedHistory(history);
 
-  if (config.provider === "openai" || config.provider === "azure") {
+  if (
+    config.provider === "openai"
+    || config.provider === "azure"
+    || config.provider === "tokenrouter"
+    || config.provider === "openrouter"
+    || config.provider === "gemini"
+  ) {
     const isAzure = config.provider === "azure";
+    const isTokenRouter = config.provider === "tokenrouter";
+    const isOpenRouter = config.provider === "openrouter";
+    const isGemini = config.provider === "gemini";
     if (isAzure && !config.endpoint) throw new Error("Azure OpenAI endpoint is missing.");
     const url = isAzure
       ? `${config.endpoint}/openai/v1/chat/completions`
-      : "https://api.openai.com/v1/chat/completions";
+      : isTokenRouter
+        ? "https://api.tokenrouter.com/v1/chat/completions"
+        : isOpenRouter
+          ? "https://openrouter.ai/api/v1/chat/completions"
+          : isGemini
+            ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+            : "https://api.openai.com/v1/chat/completions";
     const response = await fetch(url, {
       method: "POST",
       headers: isAzure
         ? { "content-type": "application/json", "api-key": config.apiKey }
-        : { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
+        : {
+            "content-type": "application/json",
+            authorization: `Bearer ${config.apiKey}`,
+            ...(isOpenRouter ? { "x-openrouter-metadata": "enabled", "x-title": "Tweaksy" } : {}),
+          },
       body: JSON.stringify({
         model: config.model,
         response_format: { type: "json_object" },
@@ -106,7 +142,7 @@ export async function generateProposal(config: ProviderConfig, request: string, 
     });
     const body = await checkedJson(response);
     const choices = body.choices as Array<{ message?: { content?: string } }> | undefined;
-    return alignSupportedRequest(parseProviderJson(choices?.[0]?.message?.content ?? ""), request, basePatch);
+    return alignSupportedRequest(constrainObservedFeedTerms(parseProviderJson(choices?.[0]?.message?.content ?? ""), snapshot), request, basePatch);
   }
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -128,7 +164,7 @@ export async function generateProposal(config: ProviderConfig, request: string, 
   });
   const body = await checkedJson(response);
   const content = body.content as Array<{ type?: string; text?: string }> | undefined;
-  return alignSupportedRequest(parseProviderJson(content?.find((part) => part.type === "text")?.text ?? ""), request, basePatch);
+  return alignSupportedRequest(constrainObservedFeedTerms(parseProviderJson(content?.find((part) => part.type === "text")?.text ?? ""), snapshot), request, basePatch);
 }
 
 export async function transcribeAudio(config: ProviderConfig, base64: string, mimeType: string): Promise<string> {

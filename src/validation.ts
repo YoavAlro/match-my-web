@@ -37,6 +37,13 @@ export function validatePatch(input: unknown): AdaptationPatch {
   const maxWidth = value.contentMaxWidthRem === null || value.contentMaxWidthRem === undefined
     ? null
     : clampNumber(value.contentMaxWidthRem, 30, 100, 70);
+  const feedFilterTerms = Array.isArray(value.feedFilterTerms)
+    ? value.feedFilterTerms
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.normalize("NFKC").replace(/\s+/g, " ").trim())
+      .filter((item) => item.length >= 2 && item.length <= 48 && !/[<>{};]|(?:javascript|data):/i.test(item))
+      .slice(0, 8)
+    : [];
 
   return {
     fontScale: optionalNumber(value.fontScale, 0.8, 2),
@@ -59,6 +66,9 @@ export function validatePatch(input: unknown): AdaptationPatch {
     contrast: value.contrast === "more" ? "more" : "unchanged",
     reduceMotion: value.reduceMotion === true,
     strongFocus: value.strongFocus === true,
+    hideSponsoredContent: value.hideSponsoredContent === true,
+    hideVideoPosts: value.hideVideoPosts === true,
+    feedFilterTerms: [...new Set(feedFilterTerms)],
     hideSelectors: [...new Set(selectors)],
   };
 }
@@ -111,7 +121,16 @@ export function validateSharedDesign(input: unknown): SharedDesign {
 export function validateProviderConfig(input: unknown): ProviderConfig {
   if (!input || typeof input !== "object") throw new Error("Provider configuration is missing.");
   const value = input as Record<string, unknown>;
-  if (value.provider !== "openai" && value.provider !== "anthropic" && value.provider !== "azure") throw new Error("Unsupported AI provider.");
+  if (
+    value.provider !== "openai"
+    && value.provider !== "anthropic"
+    && value.provider !== "azure"
+    && value.provider !== "tokenrouter"
+    && value.provider !== "openrouter"
+    && value.provider !== "gemini"
+  ) {
+    throw new Error("Unsupported AI provider.");
+  }
   if (typeof value.model !== "string" || !value.model.trim() || value.model.length > 120) throw new Error("Enter a valid model name.");
   if (typeof value.apiKey !== "string" || value.apiKey.length < 8 || value.apiKey.length > 512) throw new Error("Enter a valid API key.");
   const transcriptionModel = typeof value.transcriptionModel === "string" ? value.transcriptionModel.trim().slice(0, 120) : "";

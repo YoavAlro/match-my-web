@@ -38,6 +38,11 @@ if (!window.__MATCH_MY_WEB_SHADOW_HOOK__) {
       contrast: input.contrast === "more" ? "more" : "unchanged",
       reduceMotion: input.reduceMotion === true,
       strongFocus: input.strongFocus === true,
+      hideSponsoredContent: input.hideSponsoredContent === true,
+      hideVideoPosts: input.hideVideoPosts === true,
+      feedFilterTerms: Array.isArray(input.feedFilterTerms)
+        ? input.feedFilterTerms.filter((item): item is string => typeof item === "string").slice(0, 8)
+        : [],
       hideSelectors: Array.isArray(input.hideSelectors)
         ? input.hideSelectors.filter((item): item is string => typeof item === "string" && /^[.#a-zA-Z][\w .#>+~:-]*$/.test(item)).slice(0, 12)
         : [],

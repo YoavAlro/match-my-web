@@ -22,6 +22,15 @@ describe("supported intent routing", () => {
     expect(proposal).toBeNull();
   });
 
+  it("sends sponsored-post requests to the provider for DOM-pattern selection", () => {
+    expect(proposalFromSupportedIntent("hide posts marked Ad or Sponsored")).toBeNull();
+  });
+
+  it("routes a focused video-post request to the packaged filter", () => {
+    const proposal = proposalFromSupportedIntent("hide posts with videos");
+    expect(proposal?.patch.hideVideoPosts).toBe(true);
+  });
+
   it("does not reduce a detailed social-card request to a generic swipe deck", () => {
     const proposal = proposalFromSupportedIntent("Make a Tinder-style post deck with avatars, playable video, Like, Repost, and Comments buttons in the footer");
     expect(proposal).toBeNull();

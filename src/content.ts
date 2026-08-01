@@ -1,4 +1,5 @@
 import { buildAdaptationCss } from "./adaptation-css";
+import { isSponsoredMarker, isSponsoredMetadata } from "./feed-filter";
 import type { AdaptationPatch, ApplyReport, ExtensionMessage, MessageResult, PageContext, PageSnapshot, SiteProfile } from "./types";
 
 declare global {
@@ -16,6 +17,8 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
   type SavedDeclaration = { value: string; priority: string };
   const changedColors = new Map<StyledElement, Map<string, SavedDeclaration>>();
   let colorObserver: MutationObserver | null = null;
+  let feedFilterObserver: MutationObserver | null = null;
+  let navigationObserver: MutationObserver | null = null;
   let activeDeck: HTMLElement | null = null;
   let activeDeckRestorers: Array<() => void> = [];
 
@@ -76,6 +79,21 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       affectedElements += remapped;
       details.push(`Remapped red interface colors on ${remapped} element${remapped === 1 ? "" : "s"}.`);
     }
+    if (patch?.hideSponsoredContent || patch?.hideVideoPosts || patch?.feedFilterTerms?.length) {
+      const feedFilterTerms = patch.feedFilterTerms ?? [];
+      const hidden = applyFeedFilters(patch.hideSponsoredContent === true, patch.hideVideoPosts === true, feedFilterTerms);
+      affectedElements += Math.max(1, hidden.total);
+      if (patch.hideSponsoredContent) {
+        details.push(`Enabled sponsored-content filtering; scanned ${hidden.scanned} feed container${hidden.scanned === 1 ? "" : "s"} and matched ${hidden.sponsored} sponsored item${hidden.sponsored === 1 ? "" : "s"}.`);
+        details.push(feedDiagnostics());
+      }
+      if (patch.hideVideoPosts) {
+        details.push(`Enabled video-post filtering; currently matched ${hidden.video} feed item${hidden.video === 1 ? "" : "s"} containing video.`);
+      }
+      if (feedFilterTerms.length) {
+        details.push(`Applied the observed feed marker rule for: ${feedFilterTerms.join(", ")}.`);
+      }
+    }
     if (patch && patch.themePreset && patch.themePreset !== "unchanged") {
       affectedElements += 1;
       details.push(`Applied the ${patch.themePreset.replace(/-/g, " ")} visual theme.`);
@@ -91,6 +109,14 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
   function clearDomTransformations(): void {
     colorObserver?.disconnect();
     colorObserver = null;
+    feedFilterObserver?.disconnect();
+    feedFilterObserver = null;
+    for (const [element, saved] of filteredFeedElements) {
+      if (saved.value) element.style.setProperty("display", saved.value, saved.priority);
+      else element.style.removeProperty("display");
+      element.removeAttribute("data-mmw-feed-hidden");
+    }
+    filteredFeedElements.clear();
     for (const [element, properties] of changedColors) {
       for (const [property, saved] of properties) {
         if (saved.value) element.style.setProperty(property, saved.value, saved.priority);
@@ -614,8 +640,182 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
     return changedColors.size;
   }
 
+  const filteredFeedElements = new Map<HTMLElement, SavedDeclaration>();
+  const FEED_ITEM_SELECTOR = "article[data-testid='tweet'], [data-testid='tweet'], article, [role='article']";
+  const SEMANTIC_FEED_WRAPPER_SELECTOR = "[aria-posinset], [aria-describedby]:not([aria-posinset])";
+
+  function elementHasSponsoredMarker(element: HTMLElement): boolean {
+    const metadata = [
+      element.getAttribute("aria-label"),
+      element.getAttribute("title"),
+      element.getAttribute("data-testid"),
+    ];
+    return metadata.some(isSponsoredMetadata)
+      || isSponsoredMarker(element.innerText)
+      || isSponsoredMarker(element.textContent)
+      || isSponsoredMarker(renderedMarkerText(element));
+  }
+
+  function feedDiagnostics(): string {
+    const hiddenBold = Array.from(document.querySelectorAll<HTMLElement>("b")).slice(0, 2000)
+      .filter((element) => getComputedStyle(element).display === "none").length;
+    return `Feed signals: ${document.querySelectorAll("[role='article']").length} articles, ${document.querySelectorAll(SEMANTIC_FEED_WRAPPER_SELECTOR).length} semantic wrappers, ${document.querySelectorAll("[role='feed'] > div").length} direct feed children, ${document.querySelectorAll("a[attributionsrc]").length} attribution links, ${document.querySelectorAll("[data-content]").length} generated-text fragments, and ${hiddenBold} hidden bold fragments.`;
+  }
+
+  function renderedMarkerText(root: HTMLElement, limit = 48): string {
+    let result = "";
+    const visit = (node: Node): void => {
+      if (result.length >= limit) return;
+      if (node.nodeType === Node.TEXT_NODE) {
+        result += node.textContent ?? "";
+        return;
+      }
+      if (!(node instanceof HTMLElement)) return;
+      const style = getComputedStyle(node);
+      if (node.hidden || node.getAttribute("aria-hidden") === "true" || style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse" || Number(style.opacity) === 0) return;
+      const dataContent = node.getAttribute("data-content");
+      if (dataContent && !node.textContent?.trim()) result += dataContent;
+      for (const child of node.childNodes) visit(child);
+    };
+    visit(root);
+    return result.slice(0, limit);
+  }
+
+  function obfuscatedMarker(item: HTMLElement): boolean {
+    const groups = new Set<HTMLElement>();
+    for (const fragment of Array.from(item.querySelectorAll<HTMLElement>("b, [data-content]")).slice(0, 250)) {
+      let candidate: HTMLElement | null = fragment;
+      for (let depth = 0; candidate && candidate !== item && depth < 5; depth += 1) {
+        groups.add(candidate);
+        candidate = candidate.parentElement;
+      }
+    }
+    return [...groups].slice(0, 500).some((group) => isSponsoredMarker(renderedMarkerText(group)));
+  }
+
+  function feedContainer(item: HTMLElement): HTMLElement {
+    const semanticWrapper = item.closest<HTMLElement>(SEMANTIC_FEED_WRAPPER_SELECTOR);
+    if (semanticWrapper) return semanticWrapper;
+    const feed = item.closest<HTMLElement>("[role='feed']");
+    if (!feed) return item;
+    let directChild = item;
+    while (directChild.parentElement && directChild.parentElement !== feed) directChild = directChild.parentElement;
+    return directChild.parentElement === feed ? directChild : item;
+  }
+
+  function normalizedFeedItem(item: HTMLElement): HTMLElement {
+    return feedContainer(item);
+  }
+
+  function feedItemsIn(root: ParentNode): HTMLElement[] {
+    const items = new Set<HTMLElement>();
+    if (root instanceof HTMLElement) {
+      const closest = root.closest<HTMLElement>(FEED_ITEM_SELECTOR);
+      if (closest) items.add(normalizedFeedItem(closest));
+      if (root.matches(FEED_ITEM_SELECTOR)) items.add(normalizedFeedItem(root));
+    }
+    for (const item of root.querySelectorAll<HTMLElement>(FEED_ITEM_SELECTOR)) items.add(normalizedFeedItem(item));
+    for (const wrapper of root.querySelectorAll<HTMLElement>(SEMANTIC_FEED_WRAPPER_SELECTOR)) {
+      if (wrapper.querySelector("[role='article'], a[attributionsrc], video")) items.add(wrapper);
+    }
+    for (const feed of root.querySelectorAll<HTMLElement>("[role='feed']")) {
+      for (const child of Array.from(feed.children).slice(0, 500)) {
+        if (child instanceof HTMLElement && child.querySelector("[role='article'], a[attributionsrc], video")) items.add(child);
+      }
+    }
+    const strongEvidence = root.querySelectorAll<HTMLElement>("a[attributionsrc]");
+    for (const evidence of Array.from(strongEvidence).slice(0, 500)) items.add(feedContainer(evidence));
+    return [...items].slice(0, 2000);
+  }
+
+  function itemIsSponsored(item: HTMLElement): boolean {
+    if (item.innerText.split(/\n+/).some((line) => isSponsoredMarker(line.trim()))) return true;
+    const markers = item.querySelectorAll<HTMLElement>("span, a, [aria-label], [title], [data-testid]");
+    if (Array.from(markers).slice(0, 700).some(elementHasSponsoredMarker)) return true;
+    return item.querySelector("a[attributionsrc]") !== null || obfuscatedMarker(item);
+  }
+
+  function itemMatchesObservedTerms(item: HTMLElement, terms: Set<string>): boolean {
+    if (!terms.size) return false;
+    const values = item.innerText.split(/\n+/).map((line) => line.trim());
+    for (const marker of Array.from(item.querySelectorAll<HTMLElement>("[aria-label], [title], [data-content], span, a")).slice(0, 700)) {
+      values.push(
+        marker.getAttribute("aria-label") ?? "",
+        marker.getAttribute("title") ?? "",
+        marker.getAttribute("data-content") ?? "",
+        renderedMarkerText(marker),
+      );
+    }
+    return values.some((value) => terms.has(value.normalize("NFKC").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")));
+  }
+
+  function hideFilteredItemsIn(root: ParentNode, hideSponsored: boolean, hideVideo: boolean, terms: Set<string>): { sponsored: number; video: number; scanned: number } {
+    let sponsored = 0;
+    let video = 0;
+    const items = feedItemsIn(root);
+    for (const item of items) {
+      const sponsoredMatch = (hideSponsored && itemIsSponsored(item)) || itemMatchesObservedTerms(item, terms);
+      const videoMatch = hideVideo && item.querySelector("video") !== null;
+      if (sponsoredMatch) sponsored += 1;
+      if (videoMatch) video += 1;
+      if ((!sponsoredMatch && !videoMatch) || filteredFeedElements.has(item) || item.contains(document.activeElement)) continue;
+      filteredFeedElements.set(item, {
+        value: item.style.getPropertyValue("display"),
+        priority: item.style.getPropertyPriority("display"),
+      });
+      item.dataset.mmwFeedHidden = "true";
+      item.style.setProperty("display", "none", "important");
+    }
+    return { sponsored, video, scanned: items.length };
+  }
+
+  function applyFeedFilters(hideSponsored: boolean, hideVideo: boolean, feedFilterTerms: string[]): { sponsored: number; video: number; scanned: number; total: number } {
+    const terms = new Set(feedFilterTerms.map((term) => term.normalize("NFKC").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")));
+    const initial = hideFilteredItemsIn(document, hideSponsored, hideVideo, terms);
+    feedFilterObserver = new MutationObserver((records) => {
+      const roots = new Set<HTMLElement>();
+      for (const record of records) {
+        if (record.type === "attributes") {
+          if (record.target instanceof HTMLElement) {
+            roots.add(record.target.closest<HTMLElement>(`${SEMANTIC_FEED_WRAPPER_SELECTOR}, ${FEED_ITEM_SELECTOR}`) ?? record.target);
+          }
+          continue;
+        }
+        if (record.type === "characterData") {
+          const parent = record.target.parentElement;
+          if (parent) roots.add(parent.closest<HTMLElement>(`${SEMANTIC_FEED_WRAPPER_SELECTOR}, ${FEED_ITEM_SELECTOR}`) ?? parent);
+          continue;
+        }
+        for (const node of record.addedNodes) {
+          if (node instanceof HTMLElement) roots.add(node.closest<HTMLElement>(`${SEMANTIC_FEED_WRAPPER_SELECTOR}, ${FEED_ITEM_SELECTOR}`) ?? node);
+        }
+      }
+      for (const root of [...roots].slice(0, 200)) hideFilteredItemsIn(root, hideSponsored, hideVideo, terms);
+    });
+    feedFilterObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["aria-label", "title", "data-content", "attributionsrc", "style", "class"],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    return { ...initial, total: filteredFeedElements.size };
+  }
+
   async function loadApprovedProfile(): Promise<void> {
-    const response = await chrome.runtime.sendMessage({ type: "GET_PROFILE_FOR_URL", url: location.href } satisfies ExtensionMessage) as MessageResult<SiteProfile | null>;
+    if (!chrome.runtime?.id || typeof chrome.runtime.sendMessage !== "function") {
+      navigationObserver?.disconnect();
+      return;
+    }
+    let response: MessageResult<SiteProfile | null>;
+    try {
+      response = await chrome.runtime.sendMessage({ type: "GET_PROFILE_FOR_URL", url: location.href } satisfies ExtensionMessage) as MessageResult<SiteProfile | null>;
+    } catch {
+      // Reloading an unpacked extension invalidates content scripts in existing tabs.
+      // Stop background work quietly; a page reload injects the new extension context.
+      navigationObserver?.disconnect();
+      return;
+    }
     if (!response.ok || trackedUrl !== location.href) return;
     approvedPatch = response.data?.patch ?? null;
     previewPatch = null;
@@ -662,13 +862,45 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
     return chunks.join(" ").slice(0, 18_000);
   }
 
-  function snapshot(): PageSnapshot {
+  function discoverFeedPatterns(request = ""): NonNullable<PageSnapshot["feedPatterns"]> {
+    const requestWords = new Set((request.toLocaleLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []).slice(0, 30));
+    const patterns = new Map<string, { text: string; source: "rendered-text" | "aria-label" | "title" | "data-content"; occurrences: number; score: number }>();
+    const add = (raw: string | null | undefined, source: "rendered-text" | "aria-label" | "title" | "data-content"): void => {
+      const text = cleanText(raw);
+      if (text.length < 2 || text.length > 48) return;
+      const normalized = text.normalize("NFKC").toLocaleLowerCase();
+      const requestMatch = [...requestWords].some((word) => normalized.includes(word));
+      const semanticMatch = isSponsoredMetadata(text);
+      if (source === "rendered-text" && !requestMatch && !semanticMatch) return;
+      const key = `${source}:${normalized}`;
+      const existing = patterns.get(key);
+      if (existing) existing.occurrences += 1;
+      else patterns.set(key, { text, source, occurrences: 1, score: (semanticMatch ? 100 : 0) + (requestMatch ? 50 : 0) + (source === "rendered-text" ? 0 : 10) });
+    };
+    for (const item of feedItemsIn(document).slice(0, 80)) {
+      for (const line of item.innerText.split(/\n+/).slice(0, 30)) add(line, "rendered-text");
+      for (const marker of Array.from(item.querySelectorAll<HTMLElement>("[aria-label], [title], [data-content]")).slice(0, 300)) {
+        add(marker.getAttribute("aria-label"), "aria-label");
+        add(marker.getAttribute("title"), "title");
+        add(marker.getAttribute("data-content"), "data-content");
+        add(renderedMarkerText(marker), "rendered-text");
+      }
+      for (const group of Array.from(item.querySelectorAll<HTMLElement>("b, [data-content]")).slice(0, 150)) add(renderedMarkerText(group.parentElement ?? group), "rendered-text");
+    }
+    return [...patterns.values()]
+      .sort((left, right) => right.score - left.score || right.occurrences - left.occurrences)
+      .slice(0, 40)
+      .map(({ text, source, occurrences }) => ({ text, source, occurrences }));
+  }
+
+  function snapshot(request?: string): PageSnapshot {
     return {
       context: context(),
       headings: uniqueText("h1, h2, h3, [role='heading']", 60),
       landmarks: uniqueText("main, nav, aside, header, footer, [role='main'], [role='navigation'], [role='complementary']", 30),
       controls: uniqueText("button, a[href], summary, [role='button'], [role='link'], input:not([type='password']), select, textarea", 100),
       text: visibleTextExcerpt(),
+      feedPatterns: discoverFeedPatterns(request),
     };
   }
 
@@ -678,7 +910,7 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       return;
     }
     if (message.type === "CONTENT_SNAPSHOT") {
-      sendResponse({ ok: true, data: snapshot() });
+      sendResponse({ ok: true, data: snapshot(message.request) });
       return;
     }
     if (message.type === "CONTENT_APPLY") {
@@ -733,6 +965,7 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
 
   window.addEventListener("popstate", checkNavigation);
   window.addEventListener("hashchange", checkNavigation);
-  new MutationObserver(checkNavigation).observe(document.documentElement, { childList: true, subtree: true });
+  navigationObserver = new MutationObserver(checkNavigation);
+  navigationObserver.observe(document.documentElement, { childList: true, subtree: true });
   void loadApprovedProfile();
 }

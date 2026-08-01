@@ -52,6 +52,20 @@ describe("adaptation validation", () => {
     expect(proposal.resetFields).toEqual(["themePreset", "colorScheme"]);
   });
 
+  it("accepts the packaged sponsored-content filter without accepting arbitrary code", () => {
+    expect(validatePatch({ hideSponsoredContent: true }).hideSponsoredContent).toBe(true);
+    expect(validatePatch({ hideSponsoredContent: "document.querySelectorAll('*')" }).hideSponsoredContent).toBe(false);
+  });
+
+  it("accepts only a boolean for the packaged video-post filter", () => {
+    expect(validatePatch({ hideVideoPosts: true }).hideVideoPosts).toBe(true);
+    expect(validatePatch({ hideVideoPosts: "video" }).hideVideoPosts).toBe(false);
+  });
+
+  it("accepts bounded declarative feed terms and rejects code-like values", () => {
+    expect(validatePatch({ feedFilterTerms: [" Sponsored ", "<script>", "x" ] }).feedFilterTerms).toEqual(["Sponsored"]);
+  });
+
   it("accepts safe heading colors and rejects executable CSS-like values", () => {
     expect(validatePatch({ headingColor: "blue" }).headingColor).toBe("blue");
     expect(validatePatch({ headingColor: "#1d4ed8" }).headingColor).toBe("#1d4ed8");
@@ -85,6 +99,26 @@ describe("Azure provider validation", () => {
       apiKey: "azure-key-value",
       endpoint: "https://azure.example.test",
     })).toThrow(/Microsoft Azure/);
+  });
+});
+
+describe("OpenAI-compatible provider validation", () => {
+  it("accepts fixed TokenRouter, OpenRouter, and Gemini providers", () => {
+    expect(validateProviderConfig({
+      provider: "tokenrouter",
+      model: "moonshotai/kimi-k3-free",
+      apiKey: "tokenrouter-key-value",
+    })).toMatchObject({ provider: "tokenrouter", model: "moonshotai/kimi-k3-free" });
+    expect(validateProviderConfig({
+      provider: "openrouter",
+      model: "moonshotai/kimi-k3",
+      apiKey: "openrouter-key-value",
+    })).toMatchObject({ provider: "openrouter", model: "moonshotai/kimi-k3" });
+    expect(validateProviderConfig({
+      provider: "gemini",
+      model: "gemini-3.6-flash",
+      apiKey: "gemini-key-value",
+    })).toMatchObject({ provider: "gemini", model: "gemini-3.6-flash" });
   });
 });
 

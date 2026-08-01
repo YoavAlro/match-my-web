@@ -1,4 +1,4 @@
-export type ProviderKind = "openai" | "anthropic" | "azure";
+export type ProviderKind = "openai" | "anthropic" | "azure" | "tokenrouter" | "openrouter" | "gemini";
 
 export interface ProviderConfig {
   provider: ProviderKind;
@@ -38,6 +38,9 @@ export interface AdaptationPatch {
   contrast: ContrastMode;
   reduceMotion: boolean;
   strongFocus: boolean;
+  hideSponsoredContent: boolean;
+  hideVideoPosts: boolean;
+  feedFilterTerms: string[];
   hideSelectors: string[];
 }
 
@@ -57,6 +60,9 @@ export const ADAPTATION_FIELDS = [
   "contrast",
   "reduceMotion",
   "strongFocus",
+  "hideSponsoredContent",
+  "hideVideoPosts",
+  "feedFilterTerms",
   "hideSelectors",
 ] as const;
 
@@ -89,6 +95,7 @@ export interface PageSnapshot {
   landmarks: string[];
   controls: string[];
   text: string;
+  feedPatterns?: Array<{ text: string; source: "rendered-text" | "aria-label" | "title" | "data-content"; occurrences: number }>;
 }
 
 export interface SiteProfile {
@@ -119,7 +126,7 @@ export type ExtensionMessage =
   | { type: "GET_ACTIVE_CONTEXT" }
   | { type: "GET_ACTIVE_TAB_ID" }
   | { type: "REQUEST_ACTIVE_SITE_ACCESS" }
-  | { type: "INSPECT_ACTIVE_PAGE" }
+  | { type: "INSPECT_ACTIVE_PAGE"; request?: string }
   | { type: "GET_PROVIDER_CONFIG" }
   | { type: "SAVE_PROVIDER_CONFIG"; config: ProviderConfig }
   | { type: "GENERATE_PROPOSAL"; request: string; snapshot: PageSnapshot; history: ChatTurn[]; basePatch?: AdaptationPatch }
@@ -133,7 +140,7 @@ export type ExtensionMessage =
   | { type: "GET_PROFILE_FOR_URL"; url: string }
   | { type: "TRANSCRIBE_AUDIO"; base64: string; mimeType: string }
   | { type: "CONTENT_GET_CONTEXT" }
-  | { type: "CONTENT_SNAPSHOT" }
+  | { type: "CONTENT_SNAPSHOT"; request?: string }
   | { type: "CONTENT_APPLY"; context: PageContext; patch: AdaptationPatch; mode: "preview" | "approved"; resetFields?: AdaptationField[] }
   | { type: "CONTENT_CLEAR"; context: PageContext }
   | { type: "CONTENT_REVERT"; context: PageContext };
@@ -160,6 +167,9 @@ export const DEFAULT_PATCH: AdaptationPatch = {
   contrast: "unchanged",
   reduceMotion: false,
   strongFocus: false,
+  hideSponsoredContent: false,
+  hideVideoPosts: false,
+  feedFilterTerms: [],
   hideSelectors: [],
 };
 
@@ -179,5 +189,8 @@ export function hasAdaptationChanges(patch: AdaptationPatch): boolean {
     || patch.contrast !== "unchanged"
     || patch.reduceMotion
     || patch.strongFocus
+    || patch.hideSponsoredContent
+    || patch.hideVideoPosts
+    || (patch.feedFilterTerms?.length ?? 0) > 0
     || patch.hideSelectors.length > 0;
 }

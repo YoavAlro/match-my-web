@@ -21,7 +21,7 @@ Approved profiles stay on your device and can return after reloads, navigation, 
 Privacy by design:
 
 - No Tweaksy account or developer-operated server.
-- Your own OpenAI, Azure OpenAI, or Anthropic provider, model/deployment, and API key.
+- Your own OpenAI, Azure OpenAI, Anthropic, TokenRouter, OpenRouter, or Google Gemini provider, model/deployment, and API key.
 - No analytics, advertising, or data sale.
 - Temporary current-page access by default.
 - Ongoing access requested only for a site whose profile you save.

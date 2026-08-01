@@ -1,4 +1,5 @@
 export type ChatAction =
+  | "new-conversation"
   | "credentials-manual"
   | "import-design"
   | "share-design"
@@ -12,10 +13,17 @@ export type ChatAction =
   | "inspect-page"
   | "open-settings";
 
+export function isSendShortcut(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey">): boolean {
+  return event.key === "Enter" && (event.ctrlKey || event.metaKey);
+}
+
 export function classifyChatAction(request: string): ChatAction | null {
   const text = request.trim().toLowerCase();
   if (!text) return null;
 
+  if (/^(?:(?:please\s+)?(?:start|open|create)\s+)?(?:a\s+)?(?:new|fresh)\s+(?:chat|conversation|session)(?:\s+now)?[.!]?$|^(?:please\s+)?(?:clear|reset)\s+(?:this\s+|the\s+)?(?:chat|conversation)(?:\s+now)?[.!]?$/i.test(text)) {
+    return "new-conversation";
+  }
   if (/\b(?:save|set|change|update|store|configure|enter|use)\b.*\b(?:api[ -]?key|credentials?|secret|provider settings?|endpoint|deployment|model settings?)\b/i.test(text)) {
     return "credentials-manual";
   }

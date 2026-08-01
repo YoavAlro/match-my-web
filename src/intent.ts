@@ -14,6 +14,13 @@ export function proposalFromSupportedIntent(request: string, history: ChatTurn[]
   const isRequest = /\b(?:make|change|set|turn|show|style|use|convert|transform|want|please|try)\b|(?:שנה|תשנה|רוצה|הפוך|תעשה)/i.test(effectiveText);
   const isQuestionOnly = /^\s*(?:why|how come|למה|מדוע)\b/i.test(text);
 
+  const wantsVideoPostsHidden = /\b(?:hide|remove|filter|block|don'?t (?:want to )?see|do not (?:want to )?see)\b[^.]{0,80}\b(?:video|videos|video posts?)\b/i.test(effectiveText)
+    || /\b(?:video|videos|video posts?)\b[^.]{0,80}\b(?:hide|remove|filter|block)\b/i.test(effectiveText);
+  if (wantsVideoPostsHidden) {
+    patch.hideVideoPosts = true;
+    changes.push(isHebrew ? "הסתרת פוסטים שמכילים וידאו" : "Hide feed posts containing video");
+  }
+
   const headingRequested = /\b(?:headline|headlines|heading|headings|article title|article titles)\b|(?:כותרת|כותרות)/i.test(effectiveText);
   const namedColor = COLORS.find((color) => new RegExp(`\\b${color}\\b`, "i").test(effectiveText));
   const hexColor = effectiveText.match(/#[0-9a-f]{3}(?:[0-9a-f]{3})?\b/i)?.[0]?.toLowerCase();
@@ -57,7 +64,7 @@ export function proposalFromSupportedIntent(request: string, history: ChatTurn[]
     }
   }
 
-  const needsPageSpecificReasoning = /\b(?:ads?|advert(?:isement|ising)?s?|sponsored|promotions?|banners?)\b/i.test(effectiveText);
+  const needsPageSpecificReasoning = /\b(?:sidebar|side bar|menu|search bar|who to follow|banner)\b/i.test(effectiveText);
   const hasDetailedSocialDeckRequirements = wantsSwipeCards
     && /\b(?:posts?|tweets?|twitter|footer|likes?|retweets?|reposts?|comments?|replies|reply|videos?|media|assets?|avatars?|icons?|flip|drawer)\b/i.test(effectiveText);
   if (changes.length !== 1 || needsPageSpecificReasoning || hasDetailedSocialDeckRequirements) return null;

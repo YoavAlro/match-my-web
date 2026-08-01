@@ -21,6 +21,11 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   requests.delete(tabId);
 });
 
+chrome.tabs.onActivated.addListener(() => {
+  for (const controller of requests.values()) controller.abort();
+  requests.clear();
+});
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.url || changeInfo.status === "loading") {
     requests.get(tabId)?.abort();
@@ -58,10 +63,10 @@ async function currentContext(tab?: chrome.tabs.Tab): Promise<PageContext> {
   return { ...response.data, tabId: tab.id!, title: tab.title ?? response.data.title, url: response.data.url, origin: new URL(response.data.url).origin };
 }
 
-async function inspect(): Promise<PageSnapshot> {
+async function inspect(request?: string): Promise<PageSnapshot> {
   const tab = await activeTab();
   const expected = await currentContext(tab);
-  const response = await chrome.tabs.sendMessage(tab.id!, { type: "CONTENT_SNAPSHOT" } satisfies ExtensionMessage) as MessageResult<PageSnapshot>;
+  const response = await chrome.tabs.sendMessage(tab.id!, { type: "CONTENT_SNAPSHOT", ...(request ? { request } : {}) } satisfies ExtensionMessage) as MessageResult<PageSnapshot>;
   if (!response.ok || !response.data) throw new Error(response.error ?? "Could not read the permitted page.");
   const latest = await currentContext(tab);
   if (latest.documentToken !== expected.documentToken || latest.navigationToken !== expected.navigationToken || latest.url !== expected.url) {
@@ -145,7 +150,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
       return true;
     }
     case "INSPECT_ACTIVE_PAGE":
-      return inspect();
+      return inspect(message.request);
     case "GET_PROVIDER_CONFIG": {
       const config = await getProviderConfig();
       return config ? { ...config, apiKey: "" } : null;

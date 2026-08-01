@@ -40,6 +40,25 @@ describe("incremental adaptation patches", () => {
     expect(mergeAdaptationPatches(base, delta).hideSelectors).toEqual([".ad-slot", ".promoted"]);
   });
 
+  it("preserves sponsored-content filtering until it is explicitly reset", () => {
+    const base = { ...DEFAULT_PATCH, hideSponsoredContent: true };
+    expect(mergeAdaptationPatches(base, DEFAULT_PATCH).hideSponsoredContent).toBe(true);
+    expect(mergeAdaptationPatches(base, DEFAULT_PATCH, ["hideSponsoredContent"]).hideSponsoredContent).toBe(false);
+  });
+
+  it("preserves video-post filtering until it is explicitly reset", () => {
+    const base = { ...DEFAULT_PATCH, hideVideoPosts: true };
+    expect(mergeAdaptationPatches(base, DEFAULT_PATCH).hideVideoPosts).toBe(true);
+    expect(mergeAdaptationPatches(base, DEFAULT_PATCH, ["hideVideoPosts"]).hideVideoPosts).toBe(false);
+  });
+
+  it("merges observed feed-marker rules and supports explicit reset", () => {
+    const base = { ...DEFAULT_PATCH, feedFilterTerms: ["Sponsored"] };
+    const delta = { ...DEFAULT_PATCH, feedFilterTerms: ["Promoted"] };
+    expect(mergeAdaptationPatches(base, delta).feedFilterTerms).toEqual(["Sponsored", "Promoted"]);
+    expect(mergeAdaptationPatches(base, DEFAULT_PATCH, ["feedFilterTerms"]).feedFilterTerms).toEqual([]);
+  });
+
   it("accepts a deck-control-only delta over an existing deck", () => {
     const base = { ...DEFAULT_PATCH, articleLayout: "swipe-cards" as const };
     const delta = { ...DEFAULT_PATCH, deckControls: "sides" as const };

@@ -2,6 +2,25 @@
 
 Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person describe visual website adaptations in plain language, preview them safely, and save approved changes as local site profiles.
 
+## Install a shared build
+
+Tweaksy is not yet published in the Chrome Web Store, so a shared ZIP must be installed as an unpacked extension:
+
+1. Unzip `tweaksy-<version>-chrome.zip` into a permanent folder.
+2. Open `chrome://extensions` in Chrome.
+3. Enable **Developer mode**.
+4. Choose **Load unpacked** and select the unzipped folder—the folder containing `manifest.json`.
+5. Pin Tweaksy from Chrome's extensions menu, open a normal website, and click its toolbar icon.
+
+Each person supplies their own provider API key in **AI provider and privacy**. Keys stay in that person's local Chrome extension storage and are sent only to the configured provider. Never include API keys when sharing the build.
+
+### Everyday controls
+
+- Click the Tweaksy toolbar icon and choose **Open Tweaksy** to start or continue the conversation for the current tab.
+- Choose **Turn off for this site** to clear adaptations and stop Tweaksy only on the current origin. The toolbar icon becomes grayscale there.
+- Choose **Shut down Tweaksy** to clear adaptations and stop activity across all open sites. Click **Turn Tweaksy back on** to restore eligible saved profiles.
+- Use **Cmd+Enter** on macOS or **Ctrl+Enter** elsewhere to send a message.
+
 ## What works in this MVP foundation
 
 - Inspects only the active `http`/`https` page after a user action.
@@ -36,7 +55,7 @@ Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person descr
 
 Requirements: Node.js 22+ and Chrome 114+.
 
-```powershell
+```bash
 npm install
 npm run check
 ```

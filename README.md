@@ -2,7 +2,47 @@
 
 Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person describe visual website adaptations in plain language, preview them safely, and save approved changes as local site profiles.
 
-## What works in this MVP foundation
+![Tweaksy Live turns a dense page into a calm reading card](web/assets/tweaksy-live-social.png)
+
+## Tweaksy Live — WebMCP Challenge
+
+Tweaksy Live is a standalone challenge experience where a person and ChatGPT reshape the same visible page together. It adds a fictional six-story Harborline Journal page, a persistent approval dock, and five WebMCP site tools. The agent can inspect the surface, propose a bounded visual preview, verify that every story and link remains, and discard or explicitly approve the exact preview. No backend, account, API key, generated CSS, or hidden agent-only state is involved.
+
+Live demo: [tweaksy-live.openai.chatgpt.site](https://tweaksy-live.openai.chatgpt.site/)
+
+The strongest demo turns a dense editorial grid into a calmer one-story-at-a-time deck with larger text, reduced motion, strong keyboard focus, compact imagery, and retained navigation. The human can review the real result before saving it locally or restore the original page.
+
+### Run the web experience
+
+Requirements: Node.js 22+.
+
+```powershell
+npm install
+npm run build:web
+node scripts/serve-web.mjs
+```
+
+Open `http://127.0.0.1:4173/`. If that port is occupied, run `node scripts/serve-web.mjs --port=4319` and open the matching URL.
+
+The human controls work in any modern browser. To discover the tools, use ChatGPT’s built-in browser or a compatible WebMCP-enabled Chrome build.
+
+For the hosted worker artifact, run `npm run build:site`; the Sites-ready output is written to `dist/`.
+
+### WebMCP tools
+
+| Tool | Purpose |
+| --- | --- |
+| `inspect_tweaksy_surface` | Read the page inventory, capabilities, preservation counts, and safety guarantees. |
+| `get_tweaksy_state` | Read the exact revision, approved state, pending preview, and verification result. |
+| `preview_tweaksy_adaptation` | Apply a reversible, memory-only adaptation from vetted design fields. |
+| `discard_tweaksy_preview` | Restore the last approved design without deleting it. |
+| `approve_tweaksy_preview` | Save the exact visible preview locally after explicit approval. |
+
+See [the WebMCP architecture](docs/WEBMCP.md) for trust boundaries and [the challenge evidence](HACKATHON.md) for the pre-existing baseline and submission checklist.
+
+## Existing Chrome extension foundation
+
+The Chrome extension is the pre-existing Tweaksy product surface. It is separate from Tweaksy Live and supports optional user-supplied provider credentials for adaptation generation.
 
 - Inspects only the active `http`/`https` page after a user action.
 - Sends a bounded, value-free page snapshot only when the user chooses **Generate preview**.
@@ -66,7 +106,12 @@ The extension uses Azure's unified `POST /openai/v1/chat/completions` API and re
 - `src/main-world.ts` — no-secret bridge that styles shadow roots, including closed roots created after the hook starts.
 - `src/validation.ts` — the AI-output safety boundary.
 - `src/sidepanel.ts` — accessible chat, approval, and voice workflow.
+- `src/web/adaptation-controller.ts` — shared revision, preview, approval, discard, and restore state machine for Tweaksy Live.
+- `src/web/demo-renderer.ts` — renderer scoped to the fictional Harborline surface.
+- `src/web/webmcp.ts` — top-level WebMCP schemas, tools, execution, and feature detection.
+- `web/` — static Tweaksy Live document, styles, and original social preview.
 - `docs/ARCHITECTURE.md` — trust boundaries and lifecycle.
+- `docs/WEBMCP.md` — hosted WebMCP architecture and security boundary.
 - `docs/THREAT_MODEL.md` — security analysis and mitigations.
 - `docs/RELEASE_CHECKLIST.md` — production and Chrome Web Store gates.
 

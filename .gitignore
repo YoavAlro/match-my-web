@@ -1,5 +1,10 @@
 node_modules/
 dist/
+dist-web/
+site-public/
+.next/
+.vinext/
+.wrangler/
 coverage/
 *.log
 .DS_Store

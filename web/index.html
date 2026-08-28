@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Tweaksy Live demonstrates transparent, reversible website adaptations through WebMCP."
+    />
+    <meta name="theme-color" content="#f7f2e8" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Tweaksy Live" />
+    <meta property="og:description" content="Make this page fit you—with transparent, reversible WebMCP adaptations." />
+    <meta property="og:image" content="./assets/tweaksy-live-social.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>Tweaksy Live — make this page fit you</title>
+    <link rel="stylesheet" href="./app.css" />
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#stories">Skip to the stories</a>
+    <a class="skip-link skip-link-controls" href="#tweaksy-controls">Skip to Tweaksy controls</a>
+
+    <main id="demo-surface" class="journal" data-tweaksy-demo>
+      <header class="journal-header">
+        <div class="utility-row">
+          <p>Friday, August 28 · Evening edition</p>
+          <p>Independent stories from a changing shoreline</p>
+        </div>
+
+        <div class="masthead-row">
+          <a class="journal-name" href="#top" aria-label="Harborline Journal home">
+            <span class="journal-name-rule" aria-hidden="true"></span>
+            Harborline Journal
+          </a>
+          <nav aria-label="Primary navigation">
+            <a href="#stories">City</a>
+            <a href="#stories">Culture</a>
+            <a href="#stories">Food</a>
+            <a href="#stories">Field notes</a>
+          </nav>
+        </div>
+      </header>
+
+      <section id="top" class="lead-in" aria-labelledby="page-title">
+        <p class="eyebrow">Tonight on the harbor</p>
+        <h1 id="page-title">Six small stories. One very busy waterfront.</h1>
+        <p class="dek">
+          Follow the people reshaping Harborline after dark, from the last wooden ferry
+          to a bakery that opens when the rest of the city sleeps.
+        </p>
+        <div class="topic-row" aria-label="Story themes">
+          <span>7 minute edition</span>
+          <span>6 stories</span>
+          <span>Local reporting</span>
+        </div>
+      </section>
+
+      <section id="stories" class="stories-section" aria-labelledby="stories-title">
+        <div class="section-heading">
+          <p class="eyebrow">The evening ledger</p>
+          <h2 id="stories-title">Stories worth slowing down for</h2>
+        </div>
+
+        <div id="story-grid" class="story-grid">
+          <article class="story-card story-card-featured" data-story-id="ferry">
+            <div class="story-art story-art-ferry" role="img" aria-label="A ferry crossing blue water at sunset">
+              <span class="art-sun" aria-hidden="true"></span>
+              <span class="art-ferry" aria-hidden="true"></span>
+            </div>
+            <div class="story-copy">
+              <p class="story-meta"><span>Field notes</span><span>6 min</span></p>
+              <h3>The last wooden ferry still knows every current</h3>
+              <p>Captain Mara Venn has crossed this channel 14,000 times. She can feel a storm before the radio does.</p>
+              <a href="#ferry-story" aria-label="Read The last wooden ferry still knows every current">Read the story <span aria-hidden="true">↗</span></a>
+            </div>
+          </article>
+
+          <article class="story-card" data-story-id="bakery">
+            <div class="story-art story-art-bakery" role="img" aria-label="Warm bakery windows glowing at night">
+              <span class="art-window" aria-hidden="true"></span>
+            </div>
+            <div class="story-copy">
+              <p class="story-meta"><span>Food</span><span>4 min</span></p>
+              <h3>The bakery that starts its day at midnight</h3>
+              <p>By sunrise, every sesame loaf from Little Gull has already found a home.</p>
+              <a href="#bakery-story" aria-label="Read The bakery that starts its day at midnight">Read the story <span aria-hidden="true">↗</span></a>
+            </div>
+          </article>
+
+          <article class="story-card" data-story-id="garden">
+            <div class="story-art story-art-garden" role="img" aria-label="A green rooftop garden above brick buildings">
+              <span class="art-planter" aria-hidden="true"></span>
+            </div>
+            <div class="story-copy">
+              <p class="story-meta"><span>City</span><span>5 min</span></p>
+              <h3>A rooftop garden learns to drink the rain</h3>
+              <p>One apartment block is turning cloudbursts into tomatoes, shade and neighborly advice.</p>
+              <a href="#garden-story" aria-label="Read A rooftop garden learns to drink the rain">Read the story <span aria-hidden="true">↗</span></a>
+            </div>
+          </article>
+
+          <article class="story-card" data-story-id="radio">
+            <div class="story-art story-art-radio" role="img" aria-label="A community radio microphone with sound waves">
+              <span class="art-mic" aria-hidden="true"></span>
+            </div>
+            <div class="story-copy">
+              <p class="story-meta"><span>Culture</span><span>3 min</span></p>
+              <h3>At 91.3, the whole neighborhood gets a voice</h3>
+              <p>The city’s smallest station broadcasts weather, poetry and requests from the night shift.</p>
+              <a href="#radio-story" aria-label="Read At 91.3, the whole neighborhood gets a voice">Read the story <span aria-hidden="true">↗</span></a>
+            </div>
+          </article>
+
+          <article class="story-card" data-story-id="pool">
+            <div class="story-art story-art-pool" role="img" aria-label="Swimmers making ripples in a public pool">
+              <span class="art-ripple" aria-hidden="true"></span>
+            </div>
+            <div class="story-copy">
+              <p class="story-meta"><span>People</span><span>5 min</span></p>
+              <h3>Dawn swimmers reclaim the old tide pool</h3>
+              <p>Before the gulls arrive, a loose-knit club lowers a blue ladder into the morning.</p>
+              <a href="#pool-story" aria-label="Read Dawn swimmers reclaim the old tide pool">Read the story <span aria-hidden="true">↗</span></a>
+            </div>
+          </article>
+
+          <article class="story-card" data-story-id="signs">
+            <div class="story-art story-art-signs" role="img" aria-label="Hand-painted shop signs along a street">
+              <span class="art-sign" aria-hidden="true"></span>
+            </div>
+            <div class="story-copy">
+              <p class="story-meta"><span>Archive</span><span>4 min</span></p>
+              <h3>The sign painter keeping old storefronts legible</h3>
+              <p>Niko Vale restores fading letters—and the stories hidden under every coat of paint.</p>
+              <a href="#signs-story" aria-label="Read The sign painter keeping old storefronts legible">Read the story <span aria-hidden="true">↗</span></a>
+            </div>
+          </article>
+        </div>
+
+        <p id="deck-instructions" class="visually-hidden">Use the previous and next buttons, or focus the story deck and press the left and right arrow keys.</p>
+
+        <div class="deck-controls" aria-label="Story deck controls" hidden>
+          <button type="button" data-deck-previous>Previous story</button>
+          <p aria-live="polite" aria-atomic="true">
+            <span data-deck-current>1</span> of <span data-deck-total>6</span>
+            <span class="visually-hidden">— <span data-deck-title>The last wooden ferry still knows every current</span></span>
+          </p>
+          <button type="button" data-deck-next>Next story</button>
+        </div>
+
+        <section class="story-reader" aria-label="Full Harborline stories">
+          <article id="ferry-story" class="story-detail" tabindex="-1">
+            <p class="eyebrow">Field notes · North channel</p>
+            <h2>The last wooden ferry still knows every current</h2>
+            <p>Captain Mara Venn starts before the streetlights blink off. She checks the tide against a pencil mark inside the wheelhouse, then listens for the low knock of water beneath the cedar hull.</p>
+            <p>The ferry carries students, night-shift nurses and three bicycles on its first run. “A timetable gets you across,” Mara says. “Knowing the water gets everyone home.”</p>
+            <a href="#stories">Back to the evening ledger</a>
+          </article>
+          <article id="bakery-story" class="story-detail" tabindex="-1">
+            <p class="eyebrow">Food · Lantern Street</p>
+            <h2>The bakery that starts its day at midnight</h2>
+            <p>At Little Gull, midnight is morning. Flour lifts through the lamplight while baker Sela Orr shapes sesame loaves for the docks, the school kitchen and whoever follows the smell through the blue door.</p>
+            <p>Nothing waits under glass. By eight, the racks are bare and the bakers sit down together for the first quiet cup of tea.</p>
+            <a href="#stories">Back to the evening ledger</a>
+          </article>
+          <article id="garden-story" class="story-detail" tabindex="-1">
+            <p class="eyebrow">City · Mariner House</p>
+            <h2>A rooftop garden learns to drink the rain</h2>
+            <p>Twenty-four planters now hold enough rain to soften the rush through Mariner House’s old pipes. The same water feeds tomatoes, fennel and a wall of climbing beans.</p>
+            <p>Residents keep the watering rota beside the lift. Most visits take five minutes; few conversations stay that short.</p>
+            <a href="#stories">Back to the evening ledger</a>
+          </article>
+          <article id="radio-story" class="story-detail" tabindex="-1">
+            <p class="eyebrow">Culture · 91.3 FM</p>
+            <h2>At 91.3, the whole neighborhood gets a voice</h2>
+            <p>The studio is one room above a repair shop, insulated with old theater curtains. Its signal barely clears the ridge, but every evening the request line fills before the weather report ends.</p>
+            <p>Between songs, callers share lost gloves, late buses and poems written on break. The station’s size is the reason it can listen.</p>
+            <a href="#stories">Back to the evening ledger</a>
+          </article>
+          <article id="pool-story" class="story-detail" tabindex="-1">
+            <p class="eyebrow">People · East tide pool</p>
+            <h2>Dawn swimmers reclaim the old tide pool</h2>
+            <p>The blue ladder goes in at 5:42. No one remembers choosing the time; it simply became the minute when towels appear along the wall and the first brave swimmer tests the water.</p>
+            <p>The club has no membership list. Bring a warm drink for someone else, they say, and you already belong.</p>
+            <a href="#stories">Back to the evening ledger</a>
+          </article>
+          <article id="signs-story" class="story-detail" tabindex="-1">
+            <p class="eyebrow">Archive · Market Row</p>
+            <h2>The sign painter keeping old storefronts legible</h2>
+            <p>Niko Vale removes paint one careful layer at a time. Under a pharmacy’s plastic lettering, he finds a grocer’s gold leaf and the shadow of a name no directory remembers.</p>
+            <p>He photographs every layer before restoring the newest sign. The archive lives in flat boxes, arranged by street and the color first exposed.</p>
+            <a href="#stories">Back to the evening ledger</a>
+          </article>
+        </section>
+      </section>
+
+      <footer class="journal-footer">
+        <p>Harborline Journal is a fictional publication built to demonstrate Tweaksy safely.</p>
+        <p>© <span data-current-year>2026</span> Harborline Studio</p>
+      </footer>
+    </main>
+
+    <aside id="tweaksy-controls" class="tweaksy-dock" aria-labelledby="tweaksy-title" tabindex="-1">
+      <header class="dock-header">
+        <img src="./assets/tweaksy-mark.svg" alt="" width="46" height="46" />
+        <div>
+          <p class="dock-kicker">Tweaksy Live</p>
+          <h2 id="tweaksy-title">Make this page fit you.</h2>
+        </div>
+        <span class="connection-dot" data-connection-dot role="status" title="Ready" aria-label="Tweaksy is ready"></span>
+      </header>
+
+      <div class="dock-body">
+        <div class="tweaksy-message">
+          <p>I can adapt this demo without deleting or replacing its content. Every story remains available.</p>
+        </div>
+
+        <section class="quick-start" aria-labelledby="quick-start-title">
+          <p id="quick-start-title" class="dock-label">Try the hero adaptation</p>
+          <button class="adapt-button" type="button" data-preview-hero disabled>
+            <span>One story at a time</span>
+            <small>Larger type · less motion · strong focus</small>
+          </button>
+        </section>
+
+        <section class="decision-card" data-decision-card aria-labelledby="decision-title" hidden>
+          <div class="decision-heading">
+            <p class="dock-label" data-decision-kind>Preview</p>
+            <span data-decision-source>From Tweaksy</span>
+          </div>
+          <h3 id="decision-title" data-decision-summary>One story at a time</h3>
+          <ul data-decision-details></ul>
+          <div class="decision-actions" data-preview-actions>
+            <button class="primary-action" type="button" data-approve-preview>Approve</button>
+            <button type="button" data-discard-preview>Discard</button>
+          </div>
+          <button class="restore-action" type="button" data-restore-original hidden>Restore original page</button>
+        </section>
+
+        <section class="proof-card" aria-labelledby="proof-title">
+          <div class="proof-heading">
+            <p id="proof-title" class="dock-label">Page proof</p>
+            <span data-proof-status>Original intact</span>
+          </div>
+          <dl>
+            <div><dt>Stories</dt><dd data-proof-stories>6 of 6</dd></div>
+            <div><dt>Links</dt><dd data-proof-links>6 of 6</dd></div>
+            <div><dt>Saved</dt><dd data-proof-saved>Nothing yet</dd></div>
+          </dl>
+        </section>
+
+        <p class="dock-status" data-dock-status role="status">Preparing the adaptation controls…</p>
+      </div>
+
+      <footer class="dock-footer">
+        <span data-webmcp-status>No account or API key</span>
+        <a href="https://github.com/YoavAlro/match-my-web" target="_blank" rel="noreferrer">Source</a>
+      </footer>
+    </aside>
+  </body>
+</html>

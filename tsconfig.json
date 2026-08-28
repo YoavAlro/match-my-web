@@ -4,11 +4,14 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noEmit": true,
-    "types": ["chrome", "node", "vitest/globals"]
+    "types": ["chrome", "node", "vitest/globals", "react", "react-dom", "vinext/types"]
   },
-  "include": ["src", "tests", "scripts"]
+  "include": ["src", "tests", "scripts", "app", "vite.config.ts", "vitest.config.ts", "next.config.ts"]
 }

@@ -61,7 +61,7 @@ The next step is to bring this safe preview/approval contract back into the exte
 
 ## Links to fill before submission
 
-- Live app: `https://tweaksy-live.openai.chatgpt.site/`
+- Live app: `https://tweaksy-live.yoavalro.chatgpt.site/`
 - Public repository: `https://github.com/YoavAlro/match-my-web`
 - Demo video: `[public YouTube URL]`
 - Challenge evidence: `HACKATHON.md`

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://tweaksy-live.openai.chatgpt.site"),
+  metadataBase: new URL("https://tweaksy-live.yoavalro.chatgpt.site"),
   title: "Tweaksy Live — make this page fit you",
   description: "A transparent, reversible WebMCP experience for adapting the same live page with your agent.",
   openGraph: {

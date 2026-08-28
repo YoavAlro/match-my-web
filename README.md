@@ -8,7 +8,7 @@ Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person descr
 
 Tweaksy Live is a standalone challenge experience where a person and ChatGPT reshape the same visible page together. It adds a fictional six-story Harborline Journal page, a persistent approval dock, and five WebMCP site tools. The agent can inspect the surface, propose a bounded visual preview, verify that every story and link remains, and discard or explicitly approve the exact preview. No backend, account, API key, generated CSS, or hidden agent-only state is involved.
 
-Live demo: [tweaksy-live.openai.chatgpt.site](https://tweaksy-live.openai.chatgpt.site/)
+Live demo: [tweaksy-live.yoavalro.chatgpt.site](https://tweaksy-live.yoavalro.chatgpt.site/)
 
 The strongest demo turns a dense editorial grid into a calmer one-story-at-a-time deck with larger text, reduced motion, strong keyboard focus, compact imagery, and retained navigation. The human can review the real result before saving it locally or restore the original page.
 

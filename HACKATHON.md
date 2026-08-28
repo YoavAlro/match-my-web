@@ -22,7 +22,7 @@ That baseline includes extension-specific provider integrations, content-script 
 
 ## Submission links
 
-- Live app: <https://tweaksy-live.openai.chatgpt.site/>
+- Live app: <https://tweaksy-live.yoavalro.chatgpt.site/>
 - Public repository: <https://github.com/YoavAlro/match-my-web>
 - Baseline source: <https://github.com/YoavAlro/match-my-web/tree/37cac55ceb807cb05594d3d4eef2f73243487568>
 

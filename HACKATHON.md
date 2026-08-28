@@ -75,8 +75,8 @@ Open `http://127.0.0.1:4173/`. The human interface works in any modern browser. 
 - [x] Human-visible fallback supports the same core workflow.
 - [x] Tests and production build pass.
 - [x] MIT license is present at the repository root.
-- [ ] Public repository visibility verified after pushing the challenge branch.
-- [ ] Production URL deployed and recorded here.
+- [x] Public repository visibility verified after pushing the challenge branch.
+- [x] Production URL deployed and recorded here.
 - [ ] Production WebMCP discovery and all tool calls tested in ChatGPT’s built-in browser.
 - [ ] Public narrated YouTube demo under three minutes recorded and linked here.
 - [ ] Devpost entry submitted before September 3, 2026 at 1:00 p.m. PT.

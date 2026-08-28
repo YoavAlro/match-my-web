@@ -151,7 +151,7 @@ main {
 .conversation::-webkit-scrollbar-thumb:hover { background: #929297; }
 .conversation:focus-visible { outline-offset: -2px; }
 .conversation:empty { justify-content: center; align-items: center; color: var(--muted); text-align: center; }
-.conversation:empty::before { content: "Describe what you want to change on this page."; max-width: 15rem; font-size: .8rem; }
+.conversation:empty::before { content: "Write naturally—describe the result you want on this page."; max-width: 17rem; font-size: .8rem; }
 .message { max-width: 94%; overflow-wrap: anywhere; }
 .message.user { align-self: flex-end; padding: .65rem .8rem; border-radius: 1rem 1rem .3rem 1rem; background: var(--surface-soft); }
 .message.assistant { align-self: flex-start; padding: .15rem .1rem; }

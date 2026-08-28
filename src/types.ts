@@ -134,7 +134,7 @@ export type ExtensionMessage =
   | { type: "TRANSCRIBE_AUDIO"; base64: string; mimeType: string }
   | { type: "CONTENT_GET_CONTEXT" }
   | { type: "CONTENT_SNAPSHOT" }
-  | { type: "CONTENT_APPLY"; context: PageContext; patch: AdaptationPatch; mode: "preview" | "approved"; resetFields?: AdaptationField[] }
+  | { type: "CONTENT_APPLY"; context: PageContext; patch: AdaptationPatch; mode: "preview" | "approved"; summary?: string; resetFields?: AdaptationField[] }
   | { type: "CONTENT_CLEAR"; context: PageContext }
   | { type: "CONTENT_REVERT"; context: PageContext };
 

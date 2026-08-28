@@ -6,11 +6,11 @@ Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person descr
 
 ## Tweaksy Live — WebMCP Challenge
 
-Tweaksy Live is a standalone challenge experience where a person and ChatGPT reshape the same visible page together. It adds a fictional six-story Harborline Journal page, a persistent approval dock, and five WebMCP site tools. The agent can inspect the surface, propose a bounded visual preview, verify that every story and link remains, and discard or explicitly approve the exact preview. No backend, account, API key, generated CSS, or hidden agent-only state is involved.
+Tweaksy now demonstrates the same adaptation model in two places. **Real-site mode** uses the Chrome extension on a permitted top-level website: the person describes the desired layout in free-form chat, Tweaksy creates a bounded preview, and the extension registers four safe WebMCP tools so an agent can inspect, preview, and undo on that real page. Permanent approval stays human-only in the side panel. **Tweaksy Live** is the no-install challenge fallback: a fictional six-story Harborline Journal page with a persistent approval dock and five first-party WebMCP tools.
 
 Live demo: [tweaksy-live.yoavalro.chatgpt.site](https://tweaksy-live.yoavalro.chatgpt.site/)
 
-The strongest demo turns a dense editorial grid into a calmer one-story-at-a-time deck with larger text, reduced motion, strong keyboard focus, compact imagery, and retained navigation. The human can review the real result before saving it locally or restore the original page.
+The strongest product demo opens an ordinary site, asks Tweaksy in natural language for a calmer one-story-at-a-time layout, and reviews the result on that actual page. The public Harborline experience demonstrates the same inspect → preview → verify → approve/undo contract without requiring extension installation or provider credentials.
 
 ### Run the web experience
 
@@ -38,11 +38,13 @@ For the hosted worker artifact, run `npm run build:site`; the Sites-ready output
 | `discard_tweaksy_preview` | Restore the last approved design without deleting it. |
 | `approve_tweaksy_preview` | Save the exact visible preview locally after explicit approval. |
 
+The hosted page exposes all five tools. On third-party pages, the extension deliberately exposes only the first four: WebMCP cannot grant host permission, access provider credentials, or persist a site profile. The person approves lasting changes from the extension side panel.
+
 See [the WebMCP architecture](docs/WEBMCP.md) for trust boundaries and [the challenge evidence](HACKATHON.md) for the pre-existing baseline and submission checklist.
 
 ## Existing Chrome extension foundation
 
-The Chrome extension is the pre-existing Tweaksy product surface. It is separate from Tweaksy Live and supports optional user-supplied provider credentials for adaptation generation.
+The Chrome extension is Tweaksy’s real-site product surface. It supports optional user-supplied provider credentials for free-form adaptation generation and now adds top-level WebMCP discovery after the person activates Tweaksy for a page.
 
 - Inspects only the active `http`/`https` page after a user action.
 - Sends a bounded, value-free page snapshot only when the user chooses **Generate preview**.
@@ -52,6 +54,7 @@ The Chrome extension is the pre-existing Tweaksy product surface. It is separate
 - Supports deterministic headline colors, a full-page article deck with touch swiping, mouse dragging, keyboard navigation, optional side controls, and reversible red-to-blue/teal interface-color remapping.
 - Recognizes visible social-feed posts for swipe decks, preserving author, text, and visible image/video media without a generic article button; post details open in a local accessible dialog with a link to the original conversation.
 - Keeps preview, measured application results, approval, and undo controls inside the chat instead of claiming an unverified action succeeded.
+- Registers read, preview, and discard WebMCP tools in the real page’s top-level JavaScript context; the isolated extension world validates every request and never exposes approval, storage, permissions, or provider calls through the page bridge.
 - Provides an explicit, key-free JSON diagnostic export that can be saved into the project workspace for debugging.
 - Shares approved profiles as versioned `.tweaksy.json` files through the system share sheet or a file-save fallback. Recipients must open the matching origin, import, preview, and explicitly approve the validated declarative patch. Legacy `.matchmyweb.json` files remain importable.
 - Treats chat as the command surface for safe extension actions: inspect, preview, approve/save, cancel/revise, undo, pause/resume, share, import, debug export, and opening settings. API keys and provider credentials remain manual-only.
@@ -104,6 +107,7 @@ The extension uses Azure's unified `POST /openai/v1/chat/completions` API and re
 - `src/background.ts` — permission boundary, request cancellation, provider calls, persistence, and stale-result enforcement.
 - `src/content.ts` — bounded inspection and reversible page adaptation.
 - `src/main-world.ts` — no-secret bridge that styles shadow roots, including closed roots created after the hook starts.
+- `src/real-page-webmcp.ts` — strict schemas and four-tool contract for WebMCP on extension-permitted real pages.
 - `src/validation.ts` — the AI-output safety boundary.
 - `src/sidepanel.ts` — accessible chat, approval, and voice workflow.
 - `src/web/adaptation-controller.ts` — shared revision, preview, approval, discard, and restore state machine for Tweaksy Live.

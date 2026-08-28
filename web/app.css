@@ -100,8 +100,89 @@ button:focus-visible,
 .journal-header,
 .lead-in,
 .stories-section,
+.real-site-mode,
 .journal-footer {
   padding-inline: clamp(1.2rem, 4vw, 5rem);
+}
+
+.real-site-mode {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(14rem, 0.9fr) auto;
+  align-items: center;
+  gap: clamp(1.2rem, 3vw, 3rem);
+  margin-block: clamp(2.5rem, 5vw, 5rem) 0;
+  padding-block: clamp(1.8rem, 4vw, 3.5rem);
+  color: #edf5ff;
+  background: #17304a;
+  border-block: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.real-site-mode h2 {
+  max-width: 17ch;
+  margin: 0.3rem 0 0.7rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.75rem, 3vw, 2.8rem);
+  font-weight: 500;
+  line-height: 1.02;
+}
+
+.real-site-mode p:not(.eyebrow) {
+  max-width: 48rem;
+  margin: 0;
+  color: #bcd0e4;
+  line-height: 1.65;
+}
+
+.real-site-mode .eyebrow {
+  color: #8ebcfd;
+}
+
+.real-site-mode ol {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #dcecff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.real-site-mode li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.real-site-mode li span {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  color: #102337;
+  background: #9cc9ff;
+  border-radius: 50%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+}
+
+.real-site-link {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1rem;
+  color: #102337;
+  background: #e7f2ff;
+  border-radius: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.real-site-link:hover {
+  background: #fff;
 }
 
 .utility-row {
@@ -962,6 +1043,14 @@ button:focus-visible,
     grid-template-columns: 1fr;
   }
 
+  .real-site-mode {
+    grid-template-columns: 1fr;
+  }
+
+  .real-site-link {
+    justify-self: start;
+  }
+
   .lead-in .dek {
     grid-column: 1;
     grid-row: auto;
@@ -1032,6 +1121,7 @@ button:focus-visible,
   .journal-header,
   .lead-in,
   .stories-section,
+  .real-site-mode,
   .journal-footer {
     padding-inline: 1rem;
   }

@@ -8,17 +8,17 @@ Target length: 2:35–2:50. Record in English, with narration, no background mus
 
 **Narration:** “Websites are designed once, but people’s visual needs change. Tweaksy Live lets a person and their agent reshape the same page safely. The agent proposes; the person sees, approves, or undoes.”
 
-## 0:18–0:38 — Human fallback
+## 0:18–0:38 — Real-site free-form chat
 
-**Screen:** Point out “6 of 6” stories and links. Click **One story at a time**, briefly show the preview, then **Discard**.
+**Screen:** Briefly show Tweaksy’s Chrome side panel over a normal website. Type: “Make this calmer, show one article at a time, and reduce motion.” Show the proposal and preview on the actual page.
 
-**Narration:** “The full workflow remains usable without an agent. Every adaptation starts as a preview, and Tweaksy continuously proves the original stories and links remain intact.”
+**Narration:** “This isn’t an iframe or a fake editor. On a permitted website, I talk to Tweaksy in free-form text. It maps my request to safe visual primitives, previews the change on the real page, and waits for me to approve.”
 
 ## 0:38–1:00 — Discover the tools
 
 **Screen:** In ChatGPT’s in-app browser, open Site tools and show the five Tweaksy tools. Ask: “Inspect this Tweaksy page and tell me what you can safely adapt.”
 
-**Narration:** “The top-level page publishes five focused WebMCP tools. Read tools expose capabilities and exact state. Write tools use only a narrow, validated design vocabulary.”
+**Narration:** “The public Harborline page is the no-install fallback. Its top-level page publishes five focused WebMCP tools, so judges can test the same preview contract immediately.”
 
 ## 1:00–1:35 — Agent creates the hero preview
 
@@ -40,9 +40,9 @@ Target length: 2:35–2:50. Record in English, with narration, no background mus
 
 ## 2:18–2:42 — Architecture and close
 
-**Screen:** Briefly show `src/web/webmcp.ts`, `adaptation-controller.ts`, and the passing test summary, then return to the app/social card.
+**Screen:** Briefly show `src/real-page-webmcp.ts`, `src/web/webmcp.ts`, and the passing test summary, then return to the app/social card.
 
-**Narration:** “The dock and WebMCP tools share one revision-safe controller. Stale calls fail, preview ids prevent approving replaced work, and automated tests enforce the boundary. Tweaksy makes agentic adaptation visible, reversible, and genuinely collaborative.”
+**Narration:** “Real pages expose only inspect, preview, and undo—never credentials, permissions, or persistence. The hosted dock adds a fully testable approval loop. Automated tests enforce both boundaries. Tweaksy makes agentic adaptation visible, reversible, and genuinely collaborative.”
 
 ## Recording checklist
 

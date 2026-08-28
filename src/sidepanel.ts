@@ -33,7 +33,7 @@ const actionsMenu = $<HTMLElement>("actions-menu");
 const settingsDialog = $<HTMLDialogElement>("settings-dialog");
 const CHAT_HISTORY_KEY_PREFIX = "chat-history.session.v1:";
 const DIAGNOSTIC_KEY_PREFIX = "diagnostics.session.v1:";
-const DEFAULT_PROMPT_PLACEHOLDER = "Describe the result you want…";
+const DEFAULT_PROMPT_PLACEHOLDER = "Try: Make this calmer and easier to scan…";
 
 let snapshot: PageSnapshot | null = null;
 let activeProposal: Proposal | null = null;

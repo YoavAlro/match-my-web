@@ -1,6 +1,6 @@
-# Tweaksy Live WebMCP architecture
+# Tweaksy WebMCP architecture
 
-Tweaksy Live turns Tweaksy’s safe adaptation model into a hosted human-agent collaboration surface. ChatGPT supplies the reasoning; the page supplies bounded tools and remains the source of truth for live state.
+Tweaksy uses WebMCP in two complementary modes. The hosted Harborline surface is a zero-install, first-party challenge demo. The Chrome extension brings a smaller tool surface to real top-level pages after the person activates Tweaksy. In both modes, the page supplies bounded tools and remains the source of truth for visible state.
 
 ## Product loop
 
@@ -23,6 +23,14 @@ The manual “One story at a time” action invokes the exact same controller as
 | `approve_tweaksy_preview` | Local persistent write | Saves the exact current preview to this origin’s browser storage. Its description requires an explicit approval request. |
 
 Tools are registered in top-level page JavaScript after feature detection. Browsers without WebMCP retain the complete human workflow.
+
+## Real-site extension mode
+
+On an ordinary permitted `http` or `https` page, Tweaksy’s main-world script registers four tools with the same names and schemas: inspect, state, preview, and discard. A narrow request/response bridge forwards those calls to the isolated content script, which owns the existing real-page renderer and validates every field again. Raw CSS, HTML, scripts, URLs, selectors, content edits, and arbitrary commands never cross the boundary.
+
+The extension intentionally does **not** register `approve_tweaksy_preview` on third-party pages. DOM events in a page’s main world are not an authentication boundary, so a page must never be able to trigger privileged extension operations. WebMCP can create and undo a reversible visual preview; only the person can grant persistent origin access and approve a saved profile in the Tweaksy side panel. Provider credentials and free-form generation also remain inside trusted extension contexts.
+
+The side panel remains a genuine free-form chat. A person can say “make this calmer, show one article at a time, and reduce motion”; the configured provider maps that request to the same validated `AdaptationPatch` vocabulary. WebMCP gives compatible agents a direct structured path to the visible preview system without duplicating the renderer.
 
 ## Input boundary
 
@@ -55,6 +63,6 @@ Run the complete local gate:
 npm run check
 ```
 
-The WebMCP-specific tests cover controller state transitions, persistence, rollback, stale revisions, unsafe fields, schema closure, tool registration, shared execution, and unsupported-browser fallback.
+The WebMCP-specific tests cover hosted controller state transitions, persistence, rollback, stale revisions, unsafe fields, schema closure, top-level registration, real-page bridge validation, the no-persistence extension boundary, shared execution, and unsupported-browser fallback.
 
 The implementation follows OpenAI’s [Site tools guide](https://learn.chatgpt.com/docs/webmcp): narrow inputs, explicit side effects, verifiable results, existing application permissions, and preserved human controls.

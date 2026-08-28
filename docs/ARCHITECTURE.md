@@ -5,6 +5,8 @@
 ```mermaid
 flowchart LR
   U["User in side panel"] -->|explicit inspect| C["Isolated content script"]
+  A["WebMCP-capable agent"] -->|four bounded page tools| M["Top-level main-world registry"]
+  M -->|inspect / preview / discard only| C
   C -->|bounded snapshot; no field values| B["MV3 service worker"]
   U -->|provider key + explicit generate| B
   B -->|snapshot + request| P["User-selected AI provider"]
@@ -29,6 +31,8 @@ The installed permissions are `activeTab`, `scripting`, `sidePanel`, and `storag
 - `http://*/*` and `https://*/*` are declared as optional host capabilities because users may approve any site or supported provider, but Chrome grants only the exact origin requested at runtime.
 
 Approved origins receive two persistent, origin-scoped, document-start content registrations: a main-world shadow-root hook and an isolated content script. Chrome persists dynamic registrations across sessions.
+
+The main-world registration is deliberately non-privileged. It exposes read, reversible preview, and discard tools, but never provider generation, Chrome permission requests, profile saving, credentials, or extension storage. A person can still describe changes in unrestricted natural language in the trusted side panel; a WebMCP-capable agent uses the smaller structured page contract. Final approval remains a visible side-panel action.
 
 ## Request lifecycle and stale-result defense
 

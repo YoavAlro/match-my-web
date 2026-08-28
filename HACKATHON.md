@@ -35,6 +35,8 @@ Development began on August 28, 2026 on the `webmcp-challenge` branch. The meani
 - One revision-safe adaptation controller shared by the visible dock and WebMCP tools.
 - In-memory previews, explicit approval, discard, locally persisted approved designs, and restore-original behavior.
 - Five top-level JavaScript WebMCP tools registered with `document.modelContext.registerTool`.
+- A four-tool real-page WebMCP surface injected by the Chrome extension after explicit page activation, reusing the existing arbitrary-page renderer while keeping persistence and provider access human-controlled.
+- Free-form side-panel chat for describing real-page adaptations in natural language; the agent output is normalized into the same declarative patch model.
 - Strict, closed input schemas that expose vetted visual settings only—not CSS, HTML, JavaScript, URLs, selectors, arbitrary content edits, or network access.
 - Verification results that report story/link preservation after every change.
 - Automated tests for input safety, stale-revision rejection, preview/approve/discard state transitions, registration, and non-WebMCP fallback.
@@ -48,6 +50,7 @@ Development began on August 28, 2026 on the `webmcp-challenge` branch. The meani
 | Shared controller | `src/web/adaptation-controller.ts` |
 | Scoped renderer | `src/web/demo-renderer.ts` |
 | WebMCP registration | `src/web/webmcp.ts`, `src/web/webmcp-types.d.ts` |
+| Real-page WebMCP bridge | `src/real-page-webmcp.ts`, `src/main-world.ts`, `src/content.ts` |
 | Safe inspection | `src/web/surface-inventory.ts` |
 | Local persistence | `src/web/storage.ts` |
 | Tests | `tests/web/` |

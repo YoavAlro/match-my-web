@@ -3,7 +3,7 @@
   "name": "Tweaksy",
   "short_name": "Tweaksy",
   "description": "Describe how a website should work for you. Preview, approve, and keep private visual adaptations.",
-  "version": "0.11.5",
+  "version": "0.12.0",
   "minimum_chrome_version": "114",
   "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],

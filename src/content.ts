@@ -1,5 +1,17 @@
 import { buildAdaptationCss } from "./adaptation-css";
-import type { AdaptationPatch, ApplyReport, ExtensionMessage, MessageResult, PageContext, PageSnapshot, SiteProfile } from "./types";
+import { changesEffectiveDesign, mergeAdaptationPatches } from "./patch-merge";
+import {
+  parseExpectedRevision,
+  parseRealPagePreviewInput,
+  parseRealPageWebMcpRequest,
+  REAL_PAGE_WEBMCP_ACTIVATE_EVENT,
+  REAL_PAGE_WEBMCP_REQUEST_EVENT,
+  REAL_PAGE_WEBMCP_RESPONSE_EVENT,
+  type RealPageWebMcpRequest,
+  type RealPageWebMcpResponse,
+} from "./real-page-webmcp";
+import { DEFAULT_PATCH, hasAdaptationChanges, type AdaptationPatch, type ApplyReport, type ExtensionMessage, type MessageResult, type PageContext, type PageSnapshot, type SiteProfile } from "./types";
+import { validatePatch } from "./validation";
 
 declare global {
   interface Window { __MATCH_MY_WEB_CONTENT__?: boolean; }
@@ -12,6 +24,8 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
   let trackedUrl = location.href;
   let approvedPatch: AdaptationPatch | null = null;
   let previewPatch: AdaptationPatch | null = null;
+  let webMcpRevision = 0;
+  let previewMetadata: { id: string; summary: string; createdAt: string; source: "webmcp" | "chat" } | null = null;
   type StyledElement = HTMLElement | SVGElement;
   type SavedDeclaration = { value: string; priority: string };
   const changedColors = new Map<StyledElement, Map<string, SavedDeclaration>>();
@@ -617,8 +631,11 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
   async function loadApprovedProfile(): Promise<void> {
     const response = await chrome.runtime.sendMessage({ type: "GET_PROFILE_FOR_URL", url: location.href } satisfies ExtensionMessage) as MessageResult<SiteProfile | null>;
     if (!response.ok || trackedUrl !== location.href) return;
-    approvedPatch = response.data?.patch ?? null;
+    const nextApprovedPatch = response.data?.patch ?? null;
+    if (JSON.stringify(nextApprovedPatch) !== JSON.stringify(approvedPatch)) webMcpRevision += 1;
+    approvedPatch = nextApprovedPatch;
     previewPatch = null;
+    previewMetadata = null;
     if (approvedPatch?.articleLayout === "swipe-cards" && document.readyState === "loading") {
       await new Promise<void>((resolve) => document.addEventListener("DOMContentLoaded", () => resolve(), { once: true }));
     }
@@ -672,6 +689,133 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
     };
   }
 
+  function realPageWebMcpState(): Record<string, unknown> {
+    const approved = approvedPatch ?? DEFAULT_PATCH;
+    const effective = previewPatch ?? approved;
+    return {
+      revision: webMcpRevision,
+      mode: previewPatch ? "preview" : hasAdaptationChanges(approved) ? "approved" : "original",
+      persisted: hasAdaptationChanges(approved),
+      persistenceScope: hasAdaptationChanges(approved) ? "this browser and site origin" : "none",
+      preview: previewMetadata,
+      effectiveDesign: effective,
+      approvedDesign: approved,
+      approval: {
+        availableThroughWebMCP: false,
+        nextStep: "Inspect the visible page, then use Approve in the Tweaksy side panel to save this design for the site.",
+      },
+    };
+  }
+
+  function assertWebMcpRevision(expectedRevision: number): void {
+    if (expectedRevision !== webMcpRevision) {
+      throw new Error(`Tweaksy page state changed. Expected revision ${expectedRevision}, but the current revision is ${webMcpRevision}. Read get_tweaksy_state and try again.`);
+    }
+  }
+
+  function inspectRealPageSurface(): Record<string, unknown> {
+    return {
+      surface: "real-top-level-page",
+      title: document.title,
+      origin: location.origin,
+      counts: {
+        headings: document.querySelectorAll("h1, h2, h3, [role='heading']").length,
+        controls: document.querySelectorAll("button, a[href], summary, [role='button'], [role='link'], input, select, textarea").length,
+        articles: document.querySelectorAll("article, [role='article']").length,
+        images: document.images.length,
+      },
+      supportedAdaptations: [
+        "type scale", "line height", "letter spacing", "content width", "light or dark scheme",
+        "higher contrast", "reduced motion", "strong keyboard focus", "vetted themes",
+        "red-avoidance mode", "article or social-post swipe deck when compatible content is present",
+      ],
+      safety: {
+        topLevelPageOnly: true,
+        rawCssHtmlScriptsSelectorsAndUrlsRejected: true,
+        previewsAreReversible: true,
+        webMcpCanPersistChanges: false,
+        humanApprovalRequiredInExtension: true,
+      },
+    };
+  }
+
+  function executeRealPageWebMcp(request: RealPageWebMcpRequest): unknown {
+    switch (request.tool) {
+      case "inspect_tweaksy_surface":
+        return inspectRealPageSurface();
+      case "get_tweaksy_state":
+        return realPageWebMcpState();
+      case "preview_tweaksy_adaptation": {
+        const input = parseRealPagePreviewInput(request.input);
+        assertWebMcpRevision(input.expectedRevision);
+        const basePatch = previewPatch ?? approvedPatch;
+        const deltaPatch = validatePatch(input.changes);
+        const effectivePatch = mergeAdaptationPatches(basePatch, deltaPatch, input.resetFields);
+        if (!changesEffectiveDesign(basePatch, effectivePatch)) throw new Error("The requested fields do not change the current Tweaksy design.");
+        const priorPreview = previewPatch;
+        const priorMetadata = previewMetadata;
+        previewPatch = effectivePatch;
+        previewMetadata = { id: crypto.randomUUID(), summary: input.summary, createdAt: new Date().toISOString(), source: "webmcp" };
+        const report = applyPatch(effectivePatch);
+        if (input.resetFields.length) {
+          report.applied = true;
+          report.affectedElements = Math.max(1, report.affectedElements);
+          report.details.push(`Reset ${input.resetFields.join(", ")} to the website defaults.`);
+        }
+        if (!report.applied) {
+          previewPatch = priorPreview;
+          previewMetadata = priorMetadata;
+          applyPatch(priorPreview ?? approvedPatch);
+          throw new Error(report.details.join(" ") || "The requested preview did not produce a visible change on this page.");
+        }
+        webMcpRevision += 1;
+        return {
+          status: "preview_ready",
+          ...realPageWebMcpState(),
+          verification: report,
+          persisted: false,
+          nextStep: "Let the person inspect the visible real page. They can approve in the Tweaksy side panel or discard this preview through WebMCP.",
+        };
+      }
+      case "discard_tweaksy_preview": {
+        const expectedRevision = parseExpectedRevision(request.input, request.tool);
+        assertWebMcpRevision(expectedRevision);
+        if (!previewPatch) throw new Error("There is no Tweaksy preview to discard.");
+        previewPatch = null;
+        previewMetadata = null;
+        const report = applyPatch(approvedPatch);
+        webMcpRevision += 1;
+        return {
+          status: "preview_discarded",
+          ...realPageWebMcpState(),
+          verification: report,
+          persistedDesignUnchanged: true,
+        };
+      }
+    }
+  }
+
+  window.addEventListener(REAL_PAGE_WEBMCP_REQUEST_EVENT, (event) => {
+    if (!(event instanceof CustomEvent)) return;
+    const candidate = event.detail && typeof event.detail === "object" ? event.detail as Record<string, unknown> : null;
+    let requestId = typeof candidate?.requestId === "string" ? candidate.requestId : "invalid-request";
+    void Promise.resolve().then(() => {
+      const request = parseRealPageWebMcpRequest(event.detail);
+      requestId = request.requestId;
+      return executeRealPageWebMcp(request);
+    }).then((result) => {
+      const response: RealPageWebMcpResponse = { requestId, ok: true, result };
+      window.dispatchEvent(new CustomEvent(REAL_PAGE_WEBMCP_RESPONSE_EVENT, { detail: response }));
+    }).catch((error: unknown) => {
+      const response: RealPageWebMcpResponse = {
+        requestId,
+        ok: false,
+        error: error instanceof Error ? error.message : "Tweaksy could not complete the WebMCP request.",
+      };
+      window.dispatchEvent(new CustomEvent(REAL_PAGE_WEBMCP_RESPONSE_EVENT, { detail: response }));
+    });
+  });
+
   chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse: (value: MessageResult) => void) => {
     if (message.type === "CONTENT_GET_CONTEXT") {
       sendResponse({ ok: true, data: context() });
@@ -686,8 +830,17 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
         sendResponse({ ok: false, error: "This page changed before the adaptation could be applied." });
         return;
       }
-      if (message.mode === "approved") approvedPatch = message.patch;
-      else previewPatch = message.patch;
+      const priorApprovedPatch = approvedPatch;
+      const priorPreviewPatch = previewPatch;
+      const priorPreviewMetadata = previewMetadata;
+      if (message.mode === "approved") {
+        approvedPatch = message.patch;
+        previewPatch = null;
+        previewMetadata = null;
+      } else {
+        previewPatch = message.patch;
+        previewMetadata = { id: crypto.randomUUID(), summary: message.summary ?? "Tweaksy chat preview", createdAt: new Date().toISOString(), source: "chat" };
+      }
       const report = applyPatch(previewPatch ?? approvedPatch);
       if (message.resetFields?.length) {
         report.applied = true;
@@ -695,9 +848,14 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
         report.details.push(`Reset ${message.resetFields.join(", ")} to the website defaults.`);
       }
       if (!report.applied) {
+        approvedPatch = priorApprovedPatch;
+        previewPatch = priorPreviewPatch;
+        previewMetadata = priorPreviewMetadata;
+        applyPatch(priorPreviewPatch ?? priorApprovedPatch);
         sendResponse({ ok: false, error: report.details.join(" ") || "The proposal contained no applicable visual changes." });
         return;
       }
+      webMcpRevision += 1;
       sendResponse({ ok: true, data: report });
       return;
     }
@@ -708,7 +866,9 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       }
       approvedPatch = null;
       previewPatch = null;
+      previewMetadata = null;
       applyPatch(null);
+      webMcpRevision += 1;
       sendResponse({ ok: true });
       return;
     }
@@ -718,7 +878,9 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
         return;
       }
       previewPatch = null;
+      previewMetadata = null;
       applyPatch(approvedPatch);
+      webMcpRevision += 1;
       sendResponse({ ok: true });
     }
   });
@@ -728,11 +890,14 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
     trackedUrl = location.href;
     navigationToken = crypto.randomUUID();
     previewPatch = null;
+    previewMetadata = null;
+    webMcpRevision += 1;
     void loadApprovedProfile();
   }
 
   window.addEventListener("popstate", checkNavigation);
   window.addEventListener("hashchange", checkNavigation);
   new MutationObserver(checkNavigation).observe(document.documentElement, { childList: true, subtree: true });
+  window.dispatchEvent(new CustomEvent(REAL_PAGE_WEBMCP_ACTIVATE_EVENT));
   void loadApprovedProfile();
 }

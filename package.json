@@ -1,6 +1,6 @@
 {
   "name": "tweaksy-extension",
-  "version": "0.11.5",
+  "version": "0.12.0",
   "private": true,
   "description": "Privacy-first Chrome extension for conversational website adaptations.",
   "type": "module",

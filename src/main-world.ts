@@ -1,7 +1,70 @@
 import type { AdaptationPatch } from "./types";
+import {
+  createRealPageWebMcpTools,
+  isRealPageWebMcpResponse,
+  REAL_PAGE_WEBMCP_ACTIVATE_EVENT,
+  REAL_PAGE_WEBMCP_REQUEST_EVENT,
+  REAL_PAGE_WEBMCP_RESPONSE_EVENT,
+  type RealPageWebMcpToolName,
+} from "./real-page-webmcp";
 
 declare global {
-  interface Window { __MATCH_MY_WEB_SHADOW_HOOK__?: boolean; }
+  interface Window {
+    __MATCH_MY_WEB_SHADOW_HOOK__?: boolean;
+    __TWEAKSY_WEBMCP_BRIDGE__?: boolean;
+    __TWEAKSY_WEBMCP_REGISTERED_TOOLS__?: Set<string>;
+  }
+}
+
+if (window.top === window && !window.__TWEAKSY_WEBMCP_BRIDGE__) {
+  window.__TWEAKSY_WEBMCP_BRIDGE__ = true;
+  const registered = window.__TWEAKSY_WEBMCP_REGISTERED_TOOLS__ ?? new Set<string>();
+  window.__TWEAKSY_WEBMCP_REGISTERED_TOOLS__ = registered;
+  let registration: Promise<void> | null = null;
+
+  function executeViaContent(tool: RealPageWebMcpToolName, input: Record<string, unknown>): Promise<unknown> {
+    return new Promise((resolve, reject) => {
+      const requestId = crypto.randomUUID();
+      const timeout = window.setTimeout(() => {
+        window.removeEventListener(REAL_PAGE_WEBMCP_RESPONSE_EVENT, onResponse);
+        reject(new Error("Tweaksy did not receive a response from the extension. Open the Tweaksy side panel and try again."));
+      }, 8_000);
+      function onResponse(event: Event): void {
+        if (!(event instanceof CustomEvent) || !isRealPageWebMcpResponse(event.detail, requestId)) return;
+        window.clearTimeout(timeout);
+        window.removeEventListener(REAL_PAGE_WEBMCP_RESPONSE_EVENT, onResponse);
+        if (event.detail.ok) resolve(event.detail.result);
+        else reject(new Error(event.detail.error ?? "Tweaksy could not complete the request."));
+      }
+      window.addEventListener(REAL_PAGE_WEBMCP_RESPONSE_EVENT, onResponse);
+      window.dispatchEvent(new CustomEvent(REAL_PAGE_WEBMCP_REQUEST_EVENT, {
+        detail: { requestId, tool, input },
+      }));
+    });
+  }
+
+  async function registerWebMcpTools(): Promise<void> {
+    if (typeof document.modelContext?.registerTool !== "function" || registration) return registration ?? Promise.resolve();
+    registration = (async () => {
+      for (const tool of createRealPageWebMcpTools(executeViaContent)) {
+        if (registered.has(tool.name)) continue;
+        try {
+          await document.modelContext!.registerTool(tool);
+          registered.add(tool.name);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          if (/already|duplicate|registered/i.test(message)) registered.add(tool.name);
+          else throw error;
+        }
+      }
+    })().finally(() => { registration = null; });
+    return registration;
+  }
+
+  window.addEventListener(REAL_PAGE_WEBMCP_ACTIVATE_EVENT, () => { void registerWebMcpTools(); });
+  window.addEventListener("pageshow", () => { void registerWebMcpTools(); });
+  document.addEventListener("DOMContentLoaded", () => { void registerWebMcpTools(); }, { once: true });
+  void registerWebMcpTools();
 }
 
 if (!window.__MATCH_MY_WEB_SHADOW_HOOK__) {

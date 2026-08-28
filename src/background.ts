@@ -212,6 +212,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
         context: actual,
         patch: message.proposal.patch,
         mode: "preview",
+        summary: message.proposal.summary,
         ...(message.proposal.resetFields?.length ? { resetFields: message.proposal.resetFields } : {}),
       } satisfies ExtensionMessage) as MessageResult<ApplyReport>;
       if (!response.ok) throw new Error(response.error ?? "Preview failed.");
@@ -246,6 +247,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
         context: actual,
         patch: profile.patch,
         mode: "approved",
+        summary: profile.name,
         ...(message.proposal.resetFields?.length ? { resetFields: message.proposal.resetFields } : {}),
       } satisfies ExtensionMessage) as MessageResult<ApplyReport>;
       if (!response.ok || !response.data) throw new Error(response.error ?? "The approved profile could not be applied.");

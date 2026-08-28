@@ -2,6 +2,12 @@
 
 Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person describe visual website adaptations in plain language, preview them safely, and save approved changes as local site profiles.
 
+## First-party WebMCP companion
+
+This extension is the user-authorized path for adapting permitted websites from the outside when the website does not participate. The separate [Tweaksy Live](https://github.com/YoavAlro/tweaksy-live) project explores the first-party WebMCP alternative: a website owner intentionally exposes narrow, safe capabilities so the person, their agent, and the page can collaborate through one transparent, reversible interface.
+
+Try the live WebMCP accessibility demo at [tweaksy-live.yoavalro.chatgpt.site](https://tweaksy-live.yoavalro.chatgpt.site/).
+
 ## Install a shared build
 
 Tweaksy is not yet published in the Chrome Web Store, so a shared ZIP must be installed as an unpacked extension:

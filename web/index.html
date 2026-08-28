@@ -208,9 +208,13 @@
           <li><span>2</span> Chat naturally</li>
           <li><span>3</span> Preview, then approve</li>
         </ol>
-        <a class="real-site-link" href="https://github.com/YoavAlro/match-my-web/tree/webmcp-challenge" target="_blank" rel="noreferrer">
-          Try the extension <span aria-hidden="true">↗</span>
-        </a>
+        <div class="real-site-actions">
+          <a class="real-site-link" href="https://github.com/YoavAlro/match-my-web/releases/download/v0.12.1/tweaksy-0.12.1-chrome.zip">
+            Download Chrome demo <span aria-hidden="true">↓</span>
+          </a>
+          <small>Unzip, then choose “Load unpacked” in <code>chrome://extensions</code>.</small>
+          <a class="real-site-source" href="https://github.com/YoavAlro/match-my-web/tree/webmcp-challenge" target="_blank" rel="noreferrer">View source <span aria-hidden="true">↗</span></a>
+        </div>
       </section>
 
       <footer class="journal-footer">
@@ -230,12 +234,31 @@
       </header>
 
       <div class="dock-body">
-        <div class="tweaksy-message">
-          <p>Tell Tweaksy what you want in free-form text on real sites. Here, try the same safe preview model without installing anything.</p>
-        </div>
+        <section class="chat-panel" aria-labelledby="chat-title">
+          <div class="chat-panel-heading">
+            <p id="chat-title" class="dock-label">Talk to Tweaksy</p>
+            <span>Free-form demo</span>
+          </div>
+          <div class="chat-log" data-chat-log role="log" aria-live="polite" aria-relevant="additions">
+            <div class="chat-bubble chat-bubble-assistant">
+              Tell me how this page should feel. Try “make it calmer with larger text” or “show one story at a time in dark mode.”
+            </div>
+          </div>
+          <div class="chat-suggestions" aria-label="Example requests">
+            <button type="button" data-chat-suggestion="Make this calmer and easier to read">Calmer reading</button>
+            <button type="button" data-chat-suggestion="Show one story at a time in dark mode">Story deck</button>
+            <button type="button" data-chat-suggestion="Use high contrast, strong keyboard focus, and less motion">Accessible focus</button>
+          </div>
+          <form class="chat-composer" data-chat-form>
+            <label class="visually-hidden" for="tweaksy-chat-input">Describe how this page should change</label>
+            <textarea id="tweaksy-chat-input" data-chat-input rows="2" maxlength="400" placeholder="Describe the result you want…" required></textarea>
+            <button type="submit" data-chat-send>Preview</button>
+          </form>
+          <p class="chat-note">No account or key. This local demo understands Tweaksy’s safe layout vocabulary; the extension brings the same conversation to permitted websites.</p>
+        </section>
 
         <section class="quick-start" aria-labelledby="quick-start-title">
-          <p id="quick-start-title" class="dock-label">Try the hero adaptation</p>
+          <p id="quick-start-title" class="dock-label">Or use the one-click example</p>
           <button class="adapt-button" type="button" data-preview-hero disabled>
             <span>One story at a time</span>
             <small>Larger type · less motion · strong focus</small>

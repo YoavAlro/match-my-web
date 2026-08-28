@@ -6,11 +6,11 @@ Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person descr
 
 ## Tweaksy Live — WebMCP Challenge
 
-Tweaksy now demonstrates the same adaptation model in two places. **Real-site mode** uses the Chrome extension on a permitted top-level website: the person describes the desired layout in free-form chat, Tweaksy creates a bounded preview, and the extension registers four safe WebMCP tools so an agent can inspect, preview, and undo on that real page. Permanent approval stays human-only in the side panel. **Tweaksy Live** is the no-install challenge fallback: a fictional six-story Harborline Journal page with a persistent approval dock and five first-party WebMCP tools.
+Tweaksy now demonstrates the same adaptation model in two places. **Real-site mode** uses the Chrome extension on a permitted top-level website: the person describes the desired layout in free-form chat, Tweaksy creates a bounded preview, and the extension registers four safe WebMCP tools so an agent can inspect, preview, and undo on that real page. Permanent approval stays human-only in the side panel. **Tweaksy Live** is the no-install challenge experience: a fictional six-story Harborline Journal page with its own free-form local chat, a persistent approval dock, and five first-party WebMCP tools.
 
 Live demo: [tweaksy-live.yoavalro.chatgpt.site](https://tweaksy-live.yoavalro.chatgpt.site/)
 
-The strongest product demo opens an ordinary site, asks Tweaksy in natural language for a calmer one-story-at-a-time layout, and reviews the result on that actual page. The public Harborline experience demonstrates the same inspect → preview → verify → approve/undo contract without requiring extension installation or provider credentials.
+The strongest product demo opens an ordinary site, asks Tweaksy in natural language for a calmer one-story-at-a-time layout, and reviews the result on that actual page. The public Harborline experience now lets anyone type the same kind of request directly into the dock and see the inspect → preview → verify → approve/undo loop without an account, extension installation, or provider credentials.
 
 ### Run the web experience
 

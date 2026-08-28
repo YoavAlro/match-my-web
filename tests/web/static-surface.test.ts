@@ -19,4 +19,12 @@ describe("Harborline static surface", () => {
     expect(html).toContain('href="#tweaksy-controls">Skip to Tweaksy controls</a>');
     expect(html).toContain('id="tweaksy-controls"');
   });
+
+  it("shows a real free-form chat composer in the public dock", async () => {
+    const html = await readFile(path.resolve("web/index.html"), "utf8");
+    expect(html).toContain('data-chat-form');
+    expect(html).toContain('data-chat-input');
+    expect(html).toContain('data-chat-log');
+    expect(html).toContain('Free-form demo');
+  });
 });

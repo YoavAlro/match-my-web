@@ -31,6 +31,7 @@ That baseline includes extension-specific provider integrations, content-script 
 Development began on August 28, 2026 on the `webmcp-challenge` branch. The meaningful WebMCP extension consists of:
 
 - A standalone, static Tweaksy Live app with the original fictional Harborline Journal surface.
+- A visible free-form chat in the public dock that locally interprets natural-language layout requests into the same closed adaptation vocabulary, with example prompts and refinement support.
 - A scoped renderer that can convert a dense six-story feed into an accessible, keyboard-operable story deck without removing any story or link.
 - One revision-safe adaptation controller shared by the visible dock and WebMCP tools.
 - In-memory previews, explicit approval, discard, locally persisted approved designs, and restore-original behavior.

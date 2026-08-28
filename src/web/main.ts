@@ -6,6 +6,7 @@ import {
 import { HarborlineRenderer } from "./demo-renderer";
 import { createApprovedDesignStorage } from "./storage";
 import { registerTweaksyWebMcpTools } from "./webmcp";
+import { interpretHostedChatRequest } from "./chat-intent";
 
 function requiredElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -44,6 +45,11 @@ const proofStories = requiredElement<HTMLElement>("[data-proof-stories]");
 const proofLinks = requiredElement<HTMLElement>("[data-proof-links]");
 const proofSaved = requiredElement<HTMLElement>("[data-proof-saved]");
 const dockStatus = requiredElement<HTMLElement>("[data-dock-status]");
+const chatLog = requiredElement<HTMLElement>("[data-chat-log]");
+const chatForm = requiredElement<HTMLFormElement>("[data-chat-form]");
+const chatInput = requiredElement<HTMLTextAreaElement>("[data-chat-input]");
+const chatSend = requiredElement<HTMLButtonElement>("[data-chat-send]");
+const chatSuggestions = [...document.querySelectorAll<HTMLButtonElement>("[data-chat-suggestion]")];
 
 const controller = new AdaptationController(
   new HarborlineRenderer(root),
@@ -126,6 +132,97 @@ function runAction(action: () => void): void {
   } catch (error) {
     dockStatus.textContent = error instanceof Error ? error.message : "Tweaksy could not complete that action.";
   }
+}
+
+function appendChatMessage(role: "user" | "assistant", message: string): void {
+  const bubble = document.createElement("div");
+  bubble.className = `chat-bubble chat-bubble-${role}`;
+  bubble.textContent = message;
+  chatLog.append(bubble);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function setChatBusy(busy: boolean): void {
+  chatInput.disabled = busy;
+  chatSend.disabled = busy;
+  for (const suggestion of chatSuggestions) suggestion.disabled = busy;
+  chatForm.setAttribute("aria-busy", String(busy));
+}
+
+function handleChatRequest(rawRequest: string): void {
+  const request = rawRequest.trim();
+  if (!request) return;
+  appendChatMessage("user", request);
+  setChatBusy(true);
+  try {
+    if (/^(?:approve|save|keep)(?:\s+(?:it|this|the preview))?[.!]?$/i.test(request)) {
+      const preview = currentState.preview;
+      if (!preview) throw new Error("There is no preview to approve yet. Describe a change first.");
+      controller.approvePreview(preview.id, currentState.revision);
+      appendChatMessage("assistant", "Approved. This exact design is saved only in this browser; you can restore the original at any time.");
+      restoreButton.focus();
+      return;
+    }
+    if (/^(?:discard|undo|cancel)(?:\s+(?:it|this|the preview))?[.!]?$/i.test(request)) {
+      if (!currentState.preview) throw new Error("There is no temporary preview to discard.");
+      controller.discardPreview(currentState.revision);
+      appendChatMessage("assistant", "Preview discarded. The last approved design is back.");
+      chatInput.focus();
+      return;
+    }
+    if (/^(?:restore|reset|go back to)(?:\s+(?:the )?(?:original|default)(?: page| design)?)?[.!]?$/i.test(request)) {
+      controller.restoreOriginal(currentState.revision);
+      appendChatMessage("assistant", "The original Harborline design is restored.");
+      chatInput.focus();
+      return;
+    }
+
+    const proposal = interpretHostedChatRequest(request, currentState.effectivePatch);
+    if (!proposal) {
+      appendChatMessage("assistant", "I couldn’t map that to a safe visual change yet. Try typography, reading width, one story at a time, light or dark mode, contrast, motion, keyboard focus, or a calm, warm, minimal, or bold theme.");
+      dockStatus.textContent = "No preview created. Try one of the supported visual requests shown in the chat.";
+      return;
+    }
+    const snapshot = controller.previewAdaptation({
+      expectedRevision: currentState.revision,
+      summary: proposal.summary,
+      changes: proposal.changes,
+      ...(proposal.resetFields.length ? { resetFields: proposal.resetFields } : {}),
+    }, "human");
+    const proof = snapshot.verification.contentPreserved
+      ? `All ${snapshot.verification.storyCount} stories and ${snapshot.verification.storyLinkCount} links remain intact.`
+      : "Please review the page proof before approving.";
+    appendChatMessage("assistant", `I made a reversible preview. ${proof} Refine it in another message, approve it, or discard it.`);
+    approveButton.focus();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Tweaksy could not understand that request.";
+    appendChatMessage("assistant", message);
+    dockStatus.textContent = message;
+  } finally {
+    setChatBusy(false);
+  }
+}
+
+chatForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const request = chatInput.value;
+  chatInput.value = "";
+  handleChatRequest(request);
+});
+
+chatInput.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    event.preventDefault();
+    chatForm.requestSubmit();
+  }
+});
+
+for (const suggestion of chatSuggestions) {
+  suggestion.addEventListener("click", () => {
+    const request = suggestion.dataset.chatSuggestion ?? "";
+    chatInput.value = request;
+    chatForm.requestSubmit();
+  });
 }
 
 previewButton.addEventListener("click", () => runAction(() => {

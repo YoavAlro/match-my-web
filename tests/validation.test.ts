@@ -52,6 +52,67 @@ describe("adaptation validation", () => {
     expect(proposal.resetFields).toEqual(["themePreset", "colorScheme"]);
   });
 
+  it("accepts the packaged sponsored-content filter without accepting arbitrary code", () => {
+    expect(validatePatch({ hideSponsoredContent: true }).hideSponsoredContent).toBe(true);
+    expect(validatePatch({ hideSponsoredContent: "document.querySelectorAll('*')" }).hideSponsoredContent).toBe(false);
+  });
+
+  it("accepts only a boolean for the packaged video-post filter", () => {
+    expect(validatePatch({ hideVideoPosts: true }).hideVideoPosts).toBe(true);
+    expect(validatePatch({ hideVideoPosts: "video" }).hideVideoPosts).toBe(false);
+  });
+
+  it("accepts bounded declarative feed terms and rejects code-like values", () => {
+    expect(validatePatch({ feedFilterTerms: [" Sponsored ", "<script>", "x" ] }).feedFilterTerms).toEqual(["Sponsored"]);
+  });
+
+  it("accepts bounded declarative DOM automations without accepting scripts or sensitive selectors", () => {
+    const patch = validatePatch({
+      automationAssets: [{
+        type: "dom-filter",
+        name: "Hide attributed feed items",
+        triggers: ["page-ready", "dom-mutation", "timer"],
+        evidence: {
+          text: [" Sponsored ", "<script>"],
+          attributes: ["attributionsrc", "data-ad-marker", "href", "onclick"],
+          descendantTags: ["video", "script"],
+        },
+        container: "nearest-feed-item",
+        action: "hide",
+        code: "document.body.remove()",
+      }],
+    });
+    expect(patch.automationAssets).toEqual([{
+      type: "dom-filter",
+      name: "Hide attributed feed items",
+      skills: [
+        "semantic-attribute-evidence",
+        "exact-text-evidence",
+        "descendant-element-evidence",
+        "nearest-semantic-container",
+        "dynamic-content-trigger",
+      ],
+      triggers: ["page-ready", "dom-mutation"],
+      evidence: { text: ["Sponsored"], attributes: ["attributionsrc", "data-ad-marker"], descendantTags: ["video"] },
+      container: "nearest-feed-item",
+      action: "hide",
+    }]);
+  });
+
+  it("accepts the evidence-cluster relationship for repeated semantic markers", () => {
+    const patch = validatePatch({
+      automationAssets: [{
+        type: "dom-filter",
+        name: "Hide semantic ad cards",
+        triggers: ["page-ready", "dom-mutation"],
+        evidence: { text: [], attributes: ["data-ad-rendering-role"], descendantTags: [] },
+        container: "evidence-cluster",
+        action: "hide",
+      }],
+    });
+    expect(patch.automationAssets[0]?.container).toBe("evidence-cluster");
+  });
+
   it("accepts safe heading colors and rejects executable CSS-like values", () => {
     expect(validatePatch({ headingColor: "blue" }).headingColor).toBe("blue");
     expect(validatePatch({ headingColor: "#1d4ed8" }).headingColor).toBe("#1d4ed8");
@@ -85,6 +146,26 @@ describe("Azure provider validation", () => {
       apiKey: "azure-key-value",
       endpoint: "https://azure.example.test",
     })).toThrow(/Microsoft Azure/);
+  });
+});
+
+describe("OpenAI-compatible provider validation", () => {
+  it("accepts fixed TokenRouter, OpenRouter, and Gemini providers", () => {
+    expect(validateProviderConfig({
+      provider: "tokenrouter",
+      model: "moonshotai/kimi-k3-free",
+      apiKey: "tokenrouter-key-value",
+    })).toMatchObject({ provider: "tokenrouter", model: "moonshotai/kimi-k3-free" });
+    expect(validateProviderConfig({
+      provider: "openrouter",
+      model: "moonshotai/kimi-k3",
+      apiKey: "openrouter-key-value",
+    })).toMatchObject({ provider: "openrouter", model: "moonshotai/kimi-k3" });
+    expect(validateProviderConfig({
+      provider: "gemini",
+      model: "gemini-3.6-flash",
+      apiKey: "gemini-key-value",
+    })).toMatchObject({ provider: "gemini", model: "gemini-3.6-flash" });
   });
 });
 

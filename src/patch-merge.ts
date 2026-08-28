@@ -23,6 +23,20 @@ export function mergeAdaptationPatches(basePatch: AdaptationPatch | null, delta:
     : delta.hideSelectors.length
       ? [...new Set([...base.hideSelectors, ...delta.hideSelectors])].slice(0, 12)
       : [...base.hideSelectors];
+  const baseFeedFilterTerms = base.feedFilterTerms ?? [];
+  const deltaFeedFilterTerms = delta.feedFilterTerms ?? [];
+  const feedFilterTerms = reset.has("feedFilterTerms")
+    ? []
+    : deltaFeedFilterTerms.length
+      ? [...new Set([...baseFeedFilterTerms, ...deltaFeedFilterTerms])].slice(0, 8)
+      : [...baseFeedFilterTerms];
+  const baseAutomationAssets = base.automationAssets ?? [];
+  const deltaAutomationAssets = delta.automationAssets ?? [];
+  const automationAssets = reset.has("automationAssets")
+    ? []
+    : deltaAutomationAssets.length
+      ? [...new Map([...baseAutomationAssets, ...deltaAutomationAssets].map((asset) => [JSON.stringify(asset), asset])).values()].slice(0, 8)
+      : [...baseAutomationAssets];
 
   return {
     fontScale: number("fontScale"),
@@ -40,6 +54,10 @@ export function mergeAdaptationPatches(basePatch: AdaptationPatch | null, delta:
     contrast: enumValue("contrast", "unchanged"),
     reduceMotion: reset.has("reduceMotion") ? false : delta.reduceMotion || base.reduceMotion,
     strongFocus: reset.has("strongFocus") ? false : delta.strongFocus || base.strongFocus,
+    hideSponsoredContent: reset.has("hideSponsoredContent") ? false : delta.hideSponsoredContent === true || base.hideSponsoredContent === true,
+    hideVideoPosts: reset.has("hideVideoPosts") ? false : delta.hideVideoPosts === true || base.hideVideoPosts === true,
+    feedFilterTerms,
+    automationAssets,
     hideSelectors,
   };
 }

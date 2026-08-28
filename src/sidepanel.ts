@@ -1,5 +1,5 @@
 import { hasAdaptationChanges, type ApplyReport, type ChatTurn, type ExtensionMessage, type MessageResult, type PageContext, type PageSnapshot, type Proposal, type ProviderConfig, type SharedDesign, type SiteProfile, type SiteStatus } from "./types";
-import { classifyChatAction, type ChatAction } from "./chat-actions";
+import { classifyChatAction, isSendShortcut, type ChatAction } from "./chat-actions";
 import { changesEffectiveDesign, mergeAdaptationPatches } from "./patch-merge";
 
 const $ = <T extends HTMLElement>(id: string): T => {
@@ -28,11 +28,13 @@ const pauseSiteButton = $<HTMLButtonElement>("pause-site");
 const exportLogButton = $<HTMLButtonElement>("export-log");
 const shareDesignButton = $<HTMLButtonElement>("share-design");
 const importDesignButton = $<HTMLButtonElement>("import-design");
+const newConversationButton = $<HTMLButtonElement>("new-conversation");
 const importDesignFile = $<HTMLInputElement>("import-design-file");
 const actionsMenu = $<HTMLElement>("actions-menu");
 const settingsDialog = $<HTMLDialogElement>("settings-dialog");
 const CHAT_HISTORY_KEY_PREFIX = "chat-history.session.v1:";
 const DIAGNOSTIC_KEY_PREFIX = "diagnostics.session.v1:";
+const PENDING_PROPOSAL_KEY_PREFIX = "pending-proposal.session.v1:";
 const DEFAULT_PROMPT_PLACEHOLDER = "Try: Make this calmer and easier to scan…";
 
 let snapshot: PageSnapshot | null = null;
@@ -59,7 +61,7 @@ interface LocalSpeechConstructor {
 }
 let localRecognition: LocalSpeechRecognition | null = null;
 let currentPageContext: PageContext | null = null;
-let currentSiteStatus: SiteStatus = { hasProfile: false, paused: false };
+let currentSiteStatus: SiteStatus = { hasProfile: false, paused: false, shutdown: false };
 let currentSiteProfile: SiteProfile | null = null;
 let currentProviderMetadata: { provider: ProviderConfig["provider"]; model: string; endpointOrigin?: string } | null = null;
 const chatHistory: ChatTurn[] = [];
@@ -69,15 +71,59 @@ interface DiagnosticEvent {
   data: unknown;
 }
 const diagnosticEvents: DiagnosticEvent[] = [];
-let historyOrigin = "";
+let historyTabId: number | null = null;
 let generationEpoch = 0;
+let contextRefreshEpoch = 0;
+const pendingGenerationTabs = new Set<number>();
 
-function chatHistoryKey(origin: string): string {
-  return `${CHAT_HISTORY_KEY_PREFIX}${encodeURIComponent(origin)}`;
+function chatHistoryKey(tabId: number): string {
+  return `${CHAT_HISTORY_KEY_PREFIX}tab-${tabId}`;
 }
 
-function diagnosticKey(origin: string): string {
-  return `${DIAGNOSTIC_KEY_PREFIX}${encodeURIComponent(origin)}`;
+function diagnosticKey(tabId: number): string {
+  return `${DIAGNOSTIC_KEY_PREFIX}tab-${tabId}`;
+}
+
+function pendingProposalKey(tabId: number): string {
+  return `${PENDING_PROPOSAL_KEY_PREFIX}tab-${tabId}`;
+}
+
+interface StoredPendingProposal {
+  proposal: Proposal;
+  context: PageContext;
+}
+
+async function appendChatTurnForTab(tabId: number, turn: ChatTurn): Promise<void> {
+  if (historyTabId === tabId) {
+    remember(turn.role, turn.content);
+    return;
+  }
+  const key = chatHistoryKey(tabId);
+  const storage = await chrome.storage.session.get(key);
+  const existing = Array.isArray(storage[key]) ? storage[key] as ChatTurn[] : [];
+  const turns = [...existing, { ...turn, content: turn.content.slice(0, 1200) }].slice(-12);
+  await chrome.storage.session.set({ [key]: turns });
+}
+
+async function appendDiagnosticForTab(tabId: number, type: string, data: unknown): Promise<void> {
+  if (historyTabId === tabId) {
+    logDiagnostic(type, data);
+    return;
+  }
+  const key = diagnosticKey(tabId);
+  const storage = await chrome.storage.session.get(key);
+  const existing = Array.isArray(storage[key]) ? storage[key] as DiagnosticEvent[] : [];
+  await chrome.storage.session.set({
+    [key]: [...existing, { timestamp: new Date().toISOString(), type, data }].slice(-100),
+  });
+}
+
+async function persistPendingProposal(tabId: number, proposal: Proposal, context: PageContext): Promise<void> {
+  await chrome.storage.session.set({ [pendingProposalKey(tabId)]: { proposal, context } satisfies StoredPendingProposal });
+}
+
+async function clearPendingProposal(tabId: number | null): Promise<void> {
+  if (tabId !== null) await chrome.storage.session.remove(pendingProposalKey(tabId));
 }
 
 function pageWithoutQuery(value: string): string {
@@ -92,27 +138,27 @@ function pageWithoutQuery(value: string): string {
 function logDiagnostic(type: string, data: unknown): void {
   diagnosticEvents.push({ timestamp: new Date().toISOString(), type, data });
   if (diagnosticEvents.length > 100) diagnosticEvents.splice(0, diagnosticEvents.length - 100);
-  if (historyOrigin) void chrome.storage.session.set({ [diagnosticKey(historyOrigin)]: diagnosticEvents });
+  if (historyTabId !== null) void chrome.storage.session.set({ [diagnosticKey(historyTabId)]: diagnosticEvents });
 }
 
 function remember(role: ChatTurn["role"], content: string): void {
   chatHistory.push({ role, content: content.slice(0, 1200) });
   if (chatHistory.length > 12) chatHistory.splice(0, chatHistory.length - 12);
-  if (historyOrigin) void chrome.storage.session.set({ [chatHistoryKey(historyOrigin)]: chatHistory });
+  if (historyTabId !== null) void chrome.storage.session.set({ [chatHistoryKey(historyTabId)]: chatHistory });
 }
 
-async function useChatHistory(origin: string): Promise<void> {
-  if (historyOrigin === origin) return;
-  historyOrigin = origin;
+async function useChatHistory(tabId: number): Promise<void> {
+  if (historyTabId === tabId) return;
+  historyTabId = tabId;
   chatHistory.length = 0;
   diagnosticEvents.length = 0;
   conversation.replaceChildren();
-  const key = chatHistoryKey(origin);
-  const diagnosticsStorageKey = diagnosticKey(origin);
+  const key = chatHistoryKey(tabId);
+  const diagnosticsStorageKey = diagnosticKey(tabId);
   const storage = await chrome.storage.session.get([key, diagnosticsStorageKey]);
   const stored = storage[key];
   const storedDiagnostics = storage[diagnosticsStorageKey];
-  if (historyOrigin !== origin) return;
+  if (historyTabId !== tabId) return;
   if (Array.isArray(storedDiagnostics)) diagnosticEvents.push(...storedDiagnostics.slice(-100));
   if (!Array.isArray(stored)) return;
   const restored = stored
@@ -124,10 +170,27 @@ async function useChatHistory(origin: string): Promise<void> {
 
 function updateProviderFields(): void {
   const isAzure = providerSelect.value === "azure";
+  const isTokenRouter = providerSelect.value === "tokenrouter";
+  const isOpenRouter = providerSelect.value === "openrouter";
+  const isGemini = providerSelect.value === "gemini";
   azureSettings.hidden = !isAzure;
   endpointInput.required = isAzure;
+  const modelInput = $<HTMLInputElement>("model");
+  if (isTokenRouter && !modelInput.value.trim()) modelInput.value = "moonshotai/kimi-k3-free";
+  if (isOpenRouter && !modelInput.value.trim()) modelInput.value = "moonshotai/kimi-k3";
+  if (isGemini && !modelInput.value.trim()) modelInput.value = "gemini-3.6-flash";
+  modelInput.placeholder = isTokenRouter
+    ? "For example: moonshotai/kimi-k3-free"
+    : isOpenRouter
+      ? "For example: moonshotai/kimi-k3"
+      : isGemini
+        ? "For example: gemini-3.6-flash"
+        : "Enter a model or Azure deployment name";
   if (providerSelect.value === "anthropic") {
     voiceNote.textContent = "Chrome on-device dictation is used when available. Provider fallback recording is unavailable with Anthropic.";
+  } else if (isTokenRouter || isOpenRouter || isGemini) {
+    const providerName = isOpenRouter ? "OpenRouter" : isGemini ? "Google Gemini" : "TokenRouter";
+    voiceNote.textContent = `Chrome on-device dictation is used when available. Provider fallback recording is unavailable with ${providerName}.`;
   } else if (isAzure) {
     voiceNote.textContent = "Chrome on-device dictation is preferred. Fallback recording requires a separate Azure speech-to-text deployment. Audio is never saved.";
   } else {
@@ -208,6 +271,10 @@ function addThinking(label: string): { update: (value: string) => void; remove: 
   };
 }
 
+function removeThinkingMessages(): void {
+  for (const item of conversation.querySelectorAll(".message.thinking")) item.remove();
+}
+
 function busy(button: HTMLButtonElement, value: boolean, busyLabel: string): void {
   if (value) button.dataset.originalLabel = button.textContent ?? "";
   button.disabled = value;
@@ -239,18 +306,31 @@ function patchEntries(proposal: Proposal): Array<[string, string]> {
     ["Contrast", proposal.patch.contrast],
     ["Motion", proposal.patch.reduceMotion ? "Reduced" : "Unchanged"],
     ["Focus indicator", proposal.patch.strongFocus ? "Strengthened" : "Unchanged"],
+    ["Sponsored feed items", proposal.patch.hideSponsoredContent ? "Hidden when marked Ad, Sponsored, or Promoted" : "Unchanged"],
+    ["Video posts", proposal.patch.hideVideoPosts ? "Hidden when the feed item contains video" : "Unchanged"],
+    ["Observed feed markers", proposal.patch.feedFilterTerms?.length ? proposal.patch.feedFilterTerms.join(", ") : "None"],
+    ["Automation assets", proposal.patch.automationAssets?.length
+      ? proposal.patch.automationAssets.map((asset) => {
+        const evidence = [
+          ...asset.evidence.text.map((value) => `text “${value}”`),
+          ...asset.evidence.attributes.map((value) => `[${value}] presence`),
+          ...asset.evidence.descendantTags.map((value) => `<${value}>`),
+        ].join(", ");
+        return `${asset.name}: ${evidence} → ${asset.container.replace(/-/g, " ")} (${asset.triggers.join(" + ")}); skills: ${asset.skills.join(", ")}`;
+      }).join("; ")
+      : "None"],
     ["Hidden regions", proposal.patch.hideSelectors.length ? proposal.patch.hideSelectors.join(", ") : "None"],
     ["Reset to site default", proposal.resetFields?.length ? proposal.resetFields.join(", ") : "None"],
   ];
 }
 
-function describePatch(proposal: Proposal, context: PageContext): boolean {
+function describePatch(proposal: Proposal, context: PageContext, announce = true): boolean {
   if (!hasAdaptationChanges(proposal.patch) && !proposal.resetFields?.length) {
     activeProposal = null;
     proposalContext = null;
     actionDock.replaceChildren();
     actionDock.hidden = true;
-    addMessage(`Tweaksy: ${proposal.summary}`);
+    if (announce) addMessage(`Tweaksy: ${proposal.summary}`);
     setStatus("The response contains no previewable visual change. Refine the request and try again.");
     return false;
   }
@@ -267,7 +347,7 @@ function describePatch(proposal: Proposal, context: PageContext): boolean {
   proposalSection.hidden = true;
   saveButton.disabled = true;
 
-  addMessage(`Tweaksy: ${proposal.summary}`);
+  if (announce) addMessage(`Tweaksy: ${proposal.summary}`);
   const card = document.createElement("article");
   card.className = "action-card";
   const copy = document.createElement("div");
@@ -398,6 +478,34 @@ function describePatch(proposal: Proposal, context: PageContext): boolean {
   return true;
 }
 
+async function restorePendingTabState(tabId: number): Promise<void> {
+  if (historyTabId !== tabId) return;
+  removeThinkingMessages();
+  if (pendingGenerationTabs.has(tabId)) {
+    addThinking("Still building a safe, reversible proposal for this tab…");
+    setStatus("Generation is still running for this tab.");
+    return;
+  }
+  const key = pendingProposalKey(tabId);
+  const storage = await chrome.storage.session.get(key);
+  if (historyTabId !== tabId) return;
+  const stored = storage[key] as StoredPendingProposal | undefined;
+  if (!stored?.proposal || !stored.context || stored.context.tabId !== tabId) return;
+  const current = currentPageContext;
+  if (!current
+    || current.documentToken !== stored.context.documentToken
+    || current.navigationToken !== stored.context.navigationToken
+    || current.url !== stored.context.url) {
+    await chrome.storage.session.remove(key);
+    return;
+  }
+  activeProposal = stored.proposal;
+  proposalContext = stored.context;
+  previewActive = false;
+  describePatch(stored.proposal, stored.context, false);
+  setStatus("Proposal ready. Preview and approval are available in the chat.");
+}
+
 function updateActionDock(state: "previewed" | "saved" | "reverted", message: string): void {
   if (actionDock.hidden) return;
   const preview = actionDock.querySelector<HTMLButtonElement>("[data-action='preview']");
@@ -432,6 +540,7 @@ async function cancelProposalForFeedback(proposal: Proposal, context: PageContex
     throw new Error("This proposal is no longer active.");
   }
   generationEpoch += 1;
+  await clearPendingProposal(context.tabId);
   if (previewActive) await runRevert(context, false);
   activeProposal = null;
   proposalContext = null;
@@ -455,22 +564,34 @@ function reportError(error: unknown, fallback: string, reveal = true): void {
 }
 
 async function refreshContext(): Promise<void> {
+  const refreshId = ++contextRefreshEpoch;
   try {
     const context = await send<PageContext>({ type: "GET_ACTIVE_CONTEXT" });
+    if (refreshId !== contextRefreshEpoch) return;
     currentPageContext = context;
-    await useChatHistory(context.origin);
+    await useChatHistory(context.tabId);
     pageBadge.textContent = "Ready";
     pageDetail.textContent = `${context.title || "Untitled page"} — ${context.origin}`;
     await refreshSiteStatus();
   } catch (error) {
+    if (refreshId !== contextRefreshEpoch) return;
+    currentPageContext = null;
+    snapshot = null;
+    try {
+      await useChatHistory(await send<number>({ type: "GET_ACTIVE_TAB_ID" }));
+    } catch {
+      // Keep the current empty state when Chrome cannot identify an active tab.
+    }
     pageBadge.textContent = "Unavailable";
-    pageDetail.textContent = error instanceof Error ? error.message : "This page cannot be adapted.";
+    pageDetail.textContent = "This tab needs access. Choose Inspect current page, then allow access if Chrome asks.";
   }
 }
 
 function renderSiteStatus(): void {
-  pauseSiteButton.disabled = !currentSiteStatus.hasProfile;
-  pauseSiteButton.textContent = !currentSiteStatus.hasProfile
+  pauseSiteButton.disabled = currentSiteStatus.shutdown || !currentSiteStatus.hasProfile;
+  pauseSiteButton.textContent = currentSiteStatus.shutdown
+    ? "Tweaksy is shut down"
+    : !currentSiteStatus.hasProfile
     ? "No saved profile"
     : currentSiteStatus.paused ? "Resume on this site" : "Pause on this site";
   pauseSiteButton.setAttribute("aria-pressed", String(currentSiteStatus.paused));
@@ -493,9 +614,9 @@ async function setSitePaused(paused: boolean): Promise<void> {
   setStatus(paused ? "Saved adaptations are paused on this site." : "Saved adaptations are active on this site.");
 }
 
-async function inspectWithAccessPrompt(): Promise<PageSnapshot> {
+async function inspectWithAccessPrompt(request?: string): Promise<PageSnapshot> {
   try {
-    return await send<PageSnapshot>({ type: "INSPECT_ACTIVE_PAGE" });
+    return await send<PageSnapshot>({ type: "INSPECT_ACTIVE_PAGE", ...(request ? { request } : {}) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (!/cannot access contents|permission to access|host/i.test(message)) throw error;
@@ -506,7 +627,7 @@ async function inspectWithAccessPrompt(): Promise<PageSnapshot> {
       } catch (permissionError) {
         const permissionMessage = permissionError instanceof Error ? permissionError.message : "";
         if (/already has access/i.test(permissionMessage)) {
-          return await send<PageSnapshot>({ type: "INSPECT_ACTIVE_PAGE" });
+          return await send<PageSnapshot>({ type: "INSPECT_ACTIVE_PAGE", ...(request ? { request } : {}) });
         }
         throw permissionError;
       }
@@ -561,7 +682,13 @@ $("provider-form").addEventListener("submit", async (event) => {
       ? "https://api.openai.com/*"
       : config.provider === "anthropic"
         ? "https://api.anthropic.com/*"
-        : azurePermissionOrigin(config.endpoint ?? "");
+        : config.provider === "tokenrouter"
+          ? "https://api.tokenrouter.com/*"
+          : config.provider === "openrouter"
+            ? "https://openrouter.ai/*"
+            : config.provider === "gemini"
+              ? "https://generativelanguage.googleapis.com/*"
+              : azurePermissionOrigin(config.endpoint ?? "");
     const granted = await chrome.permissions.request({ origins: [providerOrigin] });
     if (!granted) throw new Error("Provider access was not granted. The extension cannot contact that API.");
     await send<boolean>({ type: "SAVE_PROVIDER_CONFIG", config });
@@ -588,8 +715,43 @@ function replyToRoutedRequest(message: string): void {
   setStatus(message);
 }
 
+async function startNewConversation(): Promise<void> {
+  generationEpoch += 1;
+  await clearPendingProposal(historyTabId);
+  if (previewActive && proposalContext) {
+    try {
+      await runRevert(proposalContext, false);
+    } catch {
+      // A navigated-away preview no longer has current-page state to restore.
+    }
+  }
+  snapshot = null;
+  activeProposal = null;
+  proposalContext = null;
+  previewActive = false;
+  saveButton.disabled = true;
+  closeActionDock();
+  proposalSection.hidden = true;
+  chatHistory.length = 0;
+  diagnosticEvents.length = 0;
+  conversation.replaceChildren();
+  if (historyTabId !== null) {
+    await chrome.storage.session.remove([chatHistoryKey(historyTabId), diagnosticKey(historyTabId)]);
+  }
+  prompt.value = "";
+  prompt.placeholder = DEFAULT_PROMPT_PLACEHOLDER;
+  const message = "New conversation started for this tab. Your saved site design and AI provider settings are unchanged.";
+  addMessage(`Tweaksy: ${message}`);
+  remember("assistant", message);
+  setStatus("New conversation started for this tab.");
+  prompt.focus();
+}
+
 async function executeChatAction(action: ChatAction): Promise<void> {
   switch (action) {
+    case "new-conversation":
+      await startNewConversation();
+      return;
     case "credentials-manual":
       settingsDialog.showModal();
       replyToRoutedRequest("I opened Settings. For your privacy, API keys and provider credentials must be entered and saved manually there.");
@@ -675,15 +837,18 @@ $("prompt-form").addEventListener("submit", async (event) => {
   }
   const button = $<HTMLButtonElement>("generate");
   const generationId = ++generationEpoch;
+  let requestTabId: number | null = null;
+  let completedWhileInactive = false;
   prompt.value = "";
   prompt.disabled = true;
   recordButton.disabled = true;
   busy(button, true, "Working…");
   let thinking: ReturnType<typeof addThinking> | null = null;
   try {
-    const latestContext = await send<PageContext>({ type: "GET_ACTIVE_CONTEXT" });
-    currentPageContext = latestContext;
-    await useChatHistory(latestContext.origin);
+    const activeTabId = await send<number>({ type: "GET_ACTIVE_TAB_ID" });
+    requestTabId = activeTabId;
+    pendingGenerationTabs.add(activeTabId);
+    await useChatHistory(activeTabId);
     addMessage(`You: ${request}`);
     logDiagnostic("user-message", { content: request });
     const priorHistory = [...chatHistory];
@@ -713,10 +878,14 @@ $("prompt-form").addEventListener("submit", async (event) => {
       await runRevert(proposalContext);
       return;
     }
+    snapshot = await inspectWithAccessPrompt(request);
+    currentPageContext = snapshot.context;
+    await appendDiagnosticForTab(activeTabId, "page-evidence", {
+      feedPatterns: snapshot.feedPatterns ?? [],
+      domSignals: snapshot.domSignals ?? [],
+    });
     if (!activeProposal) await refreshSiteStatus();
     const basePatch = activeProposal?.patch ?? currentSiteProfile?.patch ?? null;
-    snapshot = await inspectWithAccessPrompt();
-    currentPageContext = snapshot.context;
     thinking.update("Building a safe, reversible proposal from the permitted page…");
     const result = await send<{ proposal: Proposal; context: PageContext; source?: "local" | "provider" }>({
       type: "GENERATE_PROPOSAL",
@@ -729,24 +898,35 @@ $("prompt-form").addEventListener("submit", async (event) => {
       logDiagnostic("proposal-discarded", { reason: "The pending proposal was canceled while this response was running." });
       return;
     }
-    logDiagnostic("proposal-route", { source: result.source ?? "unknown" });
+    await appendDiagnosticForTab(activeTabId, "proposal-route", { source: result.source ?? "unknown" });
     const effectiveProposal: Proposal = {
       ...result.proposal,
       patch: mergeAdaptationPatches(basePatch, result.proposal.patch, result.proposal.resetFields),
     };
-    logDiagnostic("proposal-merge", {
+    await appendDiagnosticForTab(activeTabId, "proposal-merge", {
       basePatch,
       deltaPatch: result.proposal.patch,
       resetFields: result.proposal.resetFields ?? [],
       effectivePatch: effectiveProposal.patch,
     });
     if (!changesEffectiveDesign(basePatch, effectiveProposal.patch)) {
+      if (historyTabId !== activeTabId) {
+        completedWhileInactive = true;
+        await appendChatTurnForTab(activeTabId, { role: "assistant", content: effectiveProposal.summary });
+        return;
+      }
       thinking.remove();
       thinking = null;
       addMessage(`Tweaksy: ${effectiveProposal.summary}`);
       remember("assistant", effectiveProposal.summary);
       logDiagnostic("proposal-noop", { summary: effectiveProposal.summary, basePatch, deltaPatch: result.proposal.patch });
       setStatus("No new preview was created because the response did not change the active design.");
+      return;
+    }
+    await persistPendingProposal(activeTabId, effectiveProposal, result.context);
+    if (historyTabId !== activeTabId) {
+      completedWhileInactive = true;
+      await appendChatTurnForTab(activeTabId, { role: "assistant", content: effectiveProposal.summary });
       return;
     }
     activeProposal = effectiveProposal;
@@ -757,9 +937,22 @@ $("prompt-form").addEventListener("submit", async (event) => {
     remember("assistant", effectiveProposal.summary);
     if (hasPreview) setStatus("Proposal ready. Preview and approval are available in the chat.");
   } catch (error) {
-    reportError(error, "Generation failed.");
+    if (generationId === generationEpoch) {
+      if (requestTabId !== null && historyTabId !== requestTabId) {
+        completedWhileInactive = true;
+        const message = error instanceof Error ? error.message : "Generation failed.";
+        await appendChatTurnForTab(requestTabId, { role: "assistant", content: message });
+      } else {
+        reportError(error, "Generation failed.");
+      }
+    }
   } finally {
+    if (requestTabId !== null) pendingGenerationTabs.delete(requestTabId);
     thinking?.remove();
+    if (requestTabId !== null && historyTabId === requestTabId) {
+      removeThinkingMessages();
+      if (completedWhileInactive) void restorePendingTabState(requestTabId);
+    }
     busy(button, false, "");
     prompt.disabled = false;
     recordButton.disabled = false;
@@ -804,6 +997,7 @@ async function runSave(proposal: Proposal, context: PageContext, revealResult = 
   const granted = await chrome.permissions.request({ origins: [originPattern] });
   if (!granted) throw new Error("Site access was not granted. The preview remains temporary and was not saved.");
   const result = await send<{ profile: SiteProfile; report: ApplyReport }>({ type: "SAVE_PROFILE", context, proposal });
+  await clearPendingProposal(context.tabId);
   currentPageContext = context;
   currentSiteProfile = result.profile;
   previewActive = false;
@@ -918,6 +1112,7 @@ async function shareCurrentDesign(): Promise<void> {
 }
 
 shareDesignButton.addEventListener("click", () => { void shareCurrentDesign(); });
+newConversationButton.addEventListener("click", () => { void startNewConversation(); });
 
 importDesignButton.addEventListener("click", () => importDesignFile.click());
 importDesignFile.addEventListener("change", async () => {
@@ -939,7 +1134,7 @@ importDesignFile.addEventListener("change", async () => {
       throw new Error(`This design is for ${design.origin}. Open that website before importing it.`);
     }
     currentPageContext = context;
-    await useChatHistory(context.origin);
+    await useChatHistory(context.tabId);
     const proposal: Proposal = {
       summary: `Shared design “${design.name}” for ${new URL(design.origin).hostname}. Preview it before approving access and saving.`,
       patch: design.patch,
@@ -1182,7 +1377,7 @@ recordButton.addEventListener("click", async () => {
 });
 
 prompt.addEventListener("keydown", (event) => {
-  if (event.ctrlKey && event.key === "Enter") {
+  if (isSendShortcut(event)) {
     event.preventDefault();
     $<HTMLButtonElement>("generate").click();
   }
@@ -1198,6 +1393,34 @@ void send<ProviderConfig | null>({ type: "GET_PROVIDER_CONFIG" }).then((config) 
   $<HTMLInputElement>("api-key").placeholder = "Saved locally — leave blank to keep it";
   updateProviderFields();
 }).catch(() => undefined);
-providerSelect.addEventListener("change", updateProviderFields);
+providerSelect.addEventListener("change", () => {
+  const defaultModels: Partial<Record<ProviderConfig["provider"], string>> = {
+    tokenrouter: "moonshotai/kimi-k3-free",
+    openrouter: "moonshotai/kimi-k3",
+    gemini: "gemini-3.6-flash",
+  };
+  const defaultModel = defaultModels[providerSelect.value as ProviderConfig["provider"]];
+  if (defaultModel) $<HTMLInputElement>("model").value = defaultModel;
+  updateProviderFields();
+});
 updateProviderFields();
-void refreshContext();
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  contextRefreshEpoch += 1;
+  currentPageContext = null;
+  currentSiteStatus = { hasProfile: false, paused: false, shutdown: false };
+  currentSiteProfile = null;
+  snapshot = null;
+  activeProposal = null;
+  proposalContext = null;
+  previewActive = false;
+  saveButton.disabled = true;
+  closeActionDock();
+  proposalSection.hidden = true;
+  void useChatHistory(tabId).then(async () => {
+    await refreshContext();
+    await restorePendingTabState(tabId);
+  });
+});
+void refreshContext().then(async () => {
+  if (historyTabId !== null) await restorePendingTabState(historyTabId);
+});

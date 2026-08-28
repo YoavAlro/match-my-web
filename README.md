@@ -42,22 +42,49 @@ The hosted page exposes all five tools. On third-party pages, the extension deli
 
 See [the WebMCP architecture](docs/WEBMCP.md) for trust boundaries and [the challenge evidence](HACKATHON.md) for the pre-existing baseline and submission checklist.
 
+## Install a shared build
+
+Tweaksy is not yet published in the Chrome Web Store, so a shared ZIP must be installed as an unpacked extension:
+
+1. Unzip `tweaksy-<version>-chrome.zip` into a permanent folder.
+2. Open `chrome://extensions` in Chrome.
+3. Enable **Developer mode**.
+4. Choose **Load unpacked** and select the unzipped folder—the folder containing `manifest.json`.
+5. Pin Tweaksy from Chrome's extensions menu, open a normal website, and click its toolbar icon.
+
+Each person supplies their own provider API key in **AI provider and privacy**. Keys stay in that person's local Chrome extension storage and are sent only to the configured provider. Never include API keys when sharing the build.
+
+### Everyday controls
+
+- Click the Tweaksy toolbar icon and choose **Open Tweaksy** to start or continue the conversation for the current tab.
+- Choose **Turn off for this site** to clear adaptations and stop Tweaksy only on the current origin. The toolbar icon becomes grayscale there.
+- Choose **Shut down Tweaksy** to clear adaptations and stop activity across all open sites. Click **Turn Tweaksy back on** to restore eligible saved profiles.
+- Use **Cmd+Enter** on macOS or **Ctrl+Enter** elsewhere to send a message.
+
 ## Existing Chrome extension foundation
 
 The Chrome extension is Tweaksy’s real-site product surface. It supports optional user-supplied provider credentials for free-form adaptation generation and now adds top-level WebMCP discovery after the person activates Tweaksy for a page.
 
+### What works in this MVP foundation
+
 - Inspects only the active `http`/`https` page after a user action.
 - Sends a bounded, value-free page snapshot only when the user chooses **Generate preview**.
-- Uses the user's OpenAI, Azure OpenAI, or Anthropic account, model/deployment, and API key.
+- Uses the user's OpenAI, Azure OpenAI, Anthropic, TokenRouter, OpenRouter, or Google Gemini account, model/deployment, and API key.
 - Accepts a small declarative adaptation schema—never AI-generated JavaScript, HTML, remote code, or raw CSS.
-- Remembers at most 12 chat turns per site in browser-session storage so follow-ups retain context without crossing site boundaries.
+- Supports reviewed, origin-scoped DOM-filter automation assets that bind exact observed evidence to packaged actions, run on page load and infinite-feed mutations, and remain previewable, reversible, pausable, and locally persisted.
+- Composes those assets from a portable, audited DOM-skill catalog—semantic attributes, exact markers, descendant evidence, semantic containers, evidence clusters, repeating ancestors, and dynamic-content triggers—without website recipes or generated class names.
+- Includes a packaged, reversible filter for sponsored feed items, including rendered/accessibility labels, localized or split-letter markers, and standard attribution metadata; providers can enable it but cannot supply executable filtering code.
+- Includes a separate packaged, reversible filter for feed posts containing actual video elements.
+- For unfamiliar feed filtering, sends bounded observed DOM marker and structure signals to the configured provider; the provider may select only exact observed evidence, and Tweaksy executes it through a validated site-agnostic rule engine.
+- Remembers at most 12 chat turns per browser tab in session storage, keeps in-flight generation bound to its originating tab while the user browses elsewhere, and restores its thinking or completed proposal state on return.
+- Uses the toolbar popup as a fast off switch: disable only the current origin or shut Tweaksy down everywhere, immediately clear active adaptations, and show the off state with a grayscale toolbar icon. Re-enabling restores eligible saved profiles.
 - Supports deterministic headline colors, a full-page article deck with touch swiping, mouse dragging, keyboard navigation, optional side controls, and reversible red-to-blue/teal interface-color remapping.
 - Recognizes visible social-feed posts for swipe decks, preserving author, text, and visible image/video media without a generic article button; post details open in a local accessible dialog with a link to the original conversation.
 - Keeps preview, measured application results, approval, and undo controls inside the chat instead of claiming an unverified action succeeded.
 - Registers read, preview, and discard WebMCP tools in the real page’s top-level JavaScript context; the isolated extension world validates every request and never exposes approval, storage, permissions, or provider calls through the page bridge.
 - Provides an explicit, key-free JSON diagnostic export that can be saved into the project workspace for debugging.
 - Shares approved profiles as versioned `.tweaksy.json` files through the system share sheet or a file-save fallback. Recipients must open the matching origin, import, preview, and explicitly approve the validated declarative patch. Legacy `.matchmyweb.json` files remain importable.
-- Treats chat as the command surface for safe extension actions: inspect, preview, approve/save, cancel/revise, undo, pause/resume, share, import, debug export, and opening settings. API keys and provider credentials remain manual-only.
+- Treats chat as the command surface for safe extension actions: start a new tab-scoped conversation, inspect, preview, approve/save, cancel/revise, undo, pause/resume, share, import, debug export, and open settings. API keys and provider credentials remain manual-only.
 - Maps familiar website-style references to a small set of non-identical, validated visual themes rather than copying third-party CSS, logos, or trademarked brand assets.
 - Composes follow-up requests as incremental patches over the active design, preserving its palette and other established settings unless the user explicitly requests a validated field reset.
 - Rejects inherited no-op proposals and invalidates late responses when a proposal is canceled or another page action supersedes the request.
@@ -73,7 +100,7 @@ The Chrome extension is Tweaksy’s real-site product surface. It supports optio
 
 Requirements: Node.js 22+ and Chrome 114+.
 
-```powershell
+```bash
 npm install
 npm run check
 ```
@@ -83,7 +110,7 @@ Load `dist/` as an unpacked extension:
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select this repository's `dist` folder.
-4. Pin Tweaksy, open a normal website, click the toolbar button, and choose **Open for this page**. This deliberate click grants temporary `activeTab` access for the current page.
+4. Pin Tweaksy, open a normal website, click the toolbar button, and choose **Open Tweaksy**. The same popup can turn Tweaksy off for the current site or shut it down globally. This deliberate click grants temporary `activeTab` access for the current page.
 
 The extension requests no site access at install time. Clicking the toolbar provides temporary `activeTab` access. Approving a profile prompts for persistent access to that single origin.
 
@@ -101,6 +128,16 @@ Choose **Azure OpenAI** in the provider panel and enter:
 - **Voice transcription deployment:** optional; provide a separately deployed Azure speech-to-text model if recording should work.
 
 The extension uses Azure's unified `POST /openai/v1/chat/completions` API and requests runtime permission for that exact Azure origin.
+
+### OpenAI-compatible provider setup
+
+Tweaksy also supports API-token access through fixed OpenAI-compatible gateways:
+
+- **TokenRouter:** use a model ID such as `moonshotai/kimi-k3-free`. The key is sent only to `https://api.tokenrouter.com`.
+- **OpenRouter:** use a model ID such as `moonshotai/kimi-k3`. The key is sent only to `https://openrouter.ai`; paid models require sufficient OpenRouter credits.
+- **Google Gemini:** use a model ID such as `gemini-3.6-flash`. The key is sent only to `https://generativelanguage.googleapis.com`.
+
+These providers use their documented OpenAI-compatible chat-completions endpoints and Bearer authentication. Tweaksy requests runtime access only to the selected provider origin. Provider fallback voice transcription is not enabled for these gateways; Chrome on-device dictation remains available when supported.
 
 ## Repository guide
 
@@ -125,7 +162,7 @@ The extension uses Azure's unified `POST /openai/v1/chat/completions` API and re
 
 - Chrome internal pages, the Chrome Web Store, and other restricted schemes cannot be inspected or changed.
 - A closed shadow root created before temporary injection cannot be reached until the page reloads after origin approval. Approved profiles inject at document start and cover subsequently created roots.
-- Voice transcription works with OpenAI and with Azure OpenAI when the user provides a separate speech-to-text deployment. Text requests work with OpenAI, Azure OpenAI, and Anthropic.
+- Voice transcription works with OpenAI and with Azure OpenAI when the user provides a separate speech-to-text deployment. Text requests also work with Anthropic, TokenRouter, OpenRouter, and Google Gemini.
 - The build is an MVP foundation, not yet a published Chrome Web Store release. Complete every gate in `docs/RELEASE_CHECKLIST.md` before submission.
 
 ## Brand

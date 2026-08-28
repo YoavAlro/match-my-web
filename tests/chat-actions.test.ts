@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyChatAction } from "../src/chat-actions";
+import { classifyChatAction, isSendShortcut } from "../src/chat-actions";
 
 describe("chat action routing", () => {
   it.each([
@@ -17,6 +17,8 @@ describe("chat action routing", () => {
     ["import a template", "import-design"],
     ["export the debug log", "export-debug"],
     ["open settings", "open-settings"],
+    ["start a new conversation", "new-conversation"],
+    ["clear this chat", "new-conversation"],
   ])("routes %s", (request, expected) => {
     expect(classifyChatAction(request)).toBe(expected);
   });
@@ -29,5 +31,17 @@ describe("chat action routing", () => {
   it("does not steal ordinary visual requests from the adaptation agent", () => {
     expect(classifyChatAction("make the headlines blue")).toBeNull();
     expect(classifyChatAction("analyze the page and turn every article into a card")).toBeNull();
+  });
+});
+
+describe("chat send shortcut", () => {
+  it("accepts Control+Enter and Command+Enter", () => {
+    expect(isSendShortcut({ key: "Enter", ctrlKey: true, metaKey: false })).toBe(true);
+    expect(isSendShortcut({ key: "Enter", ctrlKey: false, metaKey: true })).toBe(true);
+  });
+
+  it("keeps plain Enter available for composing text", () => {
+    expect(isSendShortcut({ key: "Enter", ctrlKey: false, metaKey: false })).toBe(false);
+    expect(isSendShortcut({ key: "a", ctrlKey: false, metaKey: true })).toBe(false);
   });
 });

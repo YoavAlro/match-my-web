@@ -1,35 +1,68 @@
 import { generateProposal, transcribeAudio } from "./provider";
 import { proposalFromSupportedIntent } from "./intent";
 import { assertSamePageContext } from "./context-guard";
-import { getProfile, getProfiles, getProviderConfig, isOriginPaused, saveProfile, saveProviderConfig, setOriginPaused } from "./profile-store";
-import type { ApplyReport, ExtensionMessage, MessageResult, PageContext, PageSnapshot, ProviderConfig, SiteProfile } from "./types";
+import { getProfile, getProfiles, getProviderConfig, isGloballyDisabled, isOriginPaused, saveProfile, saveProviderConfig, setGloballyDisabled, setOriginPaused } from "./profile-store";
+import type { ApplyReport, ExtensionMessage, MessageResult, PageContext, PageSnapshot, ProviderConfig, SiteProfile, TweaksyToggleState } from "./types";
 import { validateProviderConfig, validateSharedDesign } from "./validation";
 import { registrationAlreadyExists, registrationErrorMessage } from "./registration";
+import { TabRequestRegistry } from "./tab-requests";
 
-const requests = new Map<number, AbortController>();
+const requests = new TabRequestRegistry();
+const enabledIcons = { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" };
+const disabledIcons = { 16: "icons/icon-disabled-16.png", 32: "icons/icon-disabled-32.png", 48: "icons/icon-disabled-48.png", 128: "icons/icon-disabled-128.png" };
 
 chrome.runtime.onInstalled.addListener(() => {
   scheduleRegisteredScriptSync();
+  void refreshAllToolbarIcons();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   scheduleRegisteredScriptSync();
+  void refreshAllToolbarIcons();
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-  requests.get(tabId)?.abort();
-  requests.delete(tabId);
+  requests.abort(tabId);
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.url || changeInfo.status === "loading") {
-    requests.get(tabId)?.abort();
-    requests.delete(tabId);
+    requests.abort(tabId);
   }
+  if (changeInfo.url || changeInfo.status === "complete") void refreshToolbarIcon(tabId);
+});
+
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  void refreshToolbarIcon(tabId);
 });
 
 function isWebUrl(value: string | undefined): value is string {
   return !!value && (value.startsWith("https://") || value.startsWith("http://"));
+}
+
+async function toggleStateForTab(tab: chrome.tabs.Tab): Promise<TweaksyToggleState> {
+  const shutdown = await isGloballyDisabled();
+  if (!isWebUrl(tab.url)) return { origin: null, siteDisabled: false, shutdown };
+  const origin = new URL(tab.url).origin;
+  return { origin, siteDisabled: await isOriginPaused(origin), shutdown };
+}
+
+async function refreshToolbarIcon(tabId: number): Promise<void> {
+  try {
+    const state = await toggleStateForTab(await chrome.tabs.get(tabId));
+    const disabled = state.shutdown || state.siteDisabled;
+    await Promise.all([
+      chrome.action.setIcon({ tabId, path: disabled ? disabledIcons : enabledIcons }),
+      chrome.action.setTitle({ tabId, title: disabled ? "Tweaksy is off — click to turn it on" : "Open Tweaksy" }),
+    ]);
+  } catch {
+    // Tabs may close while their state is being refreshed.
+  }
+}
+
+async function refreshAllToolbarIcons(): Promise<void> {
+  const tabs = await chrome.tabs.query({});
+  await Promise.all(tabs.flatMap((tab) => tab.id === undefined ? [] : [refreshToolbarIcon(tab.id)]));
 }
 
 async function activeTab(): Promise<chrome.tabs.Tab> {
@@ -58,10 +91,63 @@ async function currentContext(tab?: chrome.tabs.Tab): Promise<PageContext> {
   return { ...response.data, tabId: tab.id!, title: tab.title ?? response.data.title, url: response.data.url, origin: new URL(response.data.url).origin };
 }
 
-async function inspect(): Promise<PageSnapshot> {
+async function contextForTab(tabId: number): Promise<PageContext> {
+  const tab = await chrome.tabs.get(tabId);
+  if (!tab?.id) throw new Error("The tab that started this request is no longer available.");
+  return currentContext(tab);
+}
+
+async function existingContextForTab(tab: chrome.tabs.Tab): Promise<PageContext | null> {
+  if (tab.id === undefined || !isWebUrl(tab.url)) return null;
+  try {
+    const response = await chrome.tabs.sendMessage(tab.id, { type: "CONTENT_GET_CONTEXT" } satisfies ExtensionMessage) as MessageResult<PageContext>;
+    if (!response.ok || !response.data) return null;
+    return { ...response.data, tabId: tab.id, title: tab.title ?? response.data.title, url: response.data.url, origin: new URL(response.data.url).origin };
+  } catch {
+    return null;
+  }
+}
+
+async function clearExistingTab(tab: chrome.tabs.Tab): Promise<void> {
+  const context = await existingContextForTab(tab);
+  if (!context) return;
+  try {
+    await chrome.tabs.sendMessage(context.tabId, { type: "CONTENT_CLEAR", context } satisfies ExtensionMessage);
+  } catch {
+    // The tab may navigate while the command is sent.
+  }
+}
+
+async function restoreExistingTab(tab: chrome.tabs.Tab): Promise<void> {
+  const context = await existingContextForTab(tab);
+  if (!context || await isOriginPaused(context.origin)) return;
+  const profile = await getProfile(context.origin);
+  if (!profile) return;
+  try {
+    await chrome.tabs.sendMessage(context.tabId, { type: "CONTENT_APPLY", context, patch: profile.patch, mode: "approved" } satisfies ExtensionMessage);
+  } catch {
+    // The tab may navigate while the command is sent.
+  }
+}
+
+async function updateOpenTabs(disabled: boolean): Promise<void> {
+  const tabs = await chrome.tabs.query({});
+  await Promise.all(tabs.map(async (tab) => {
+    await (disabled ? clearExistingTab(tab) : restoreExistingTab(tab));
+    if (tab.id !== undefined) await refreshToolbarIcon(tab.id);
+  }));
+}
+
+async function assertTweaksyEnabled(origin?: string): Promise<void> {
+  if (await isGloballyDisabled()) throw new Error("Tweaksy is shut down. Click its toolbar icon to turn it back on.");
+  if (origin && await isOriginPaused(origin)) throw new Error("Tweaksy is turned off for this site. Click its toolbar icon to turn it on.");
+}
+
+async function inspect(request?: string): Promise<PageSnapshot> {
   const tab = await activeTab();
   const expected = await currentContext(tab);
-  const response = await chrome.tabs.sendMessage(tab.id!, { type: "CONTENT_SNAPSHOT" } satisfies ExtensionMessage) as MessageResult<PageSnapshot>;
+  await assertTweaksyEnabled(expected.origin);
+  const response = await chrome.tabs.sendMessage(tab.id!, { type: "CONTENT_SNAPSHOT", ...(request ? { request } : {}) } satisfies ExtensionMessage) as MessageResult<PageSnapshot>;
   if (!response.ok || !response.data) throw new Error(response.error ?? "Could not read the permitted page.");
   const latest = await currentContext(tab);
   if (latest.documentToken !== expected.documentToken || latest.navigationToken !== expected.navigationToken || latest.url !== expected.url) {
@@ -136,6 +222,28 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
       return currentContext();
     case "GET_ACTIVE_TAB_ID":
       return (await activeTab()).id;
+    case "GET_TWEAKSY_TOGGLE_STATE":
+      return toggleStateForTab(await activeTab());
+    case "SET_ACTIVE_SITE_DISABLED": {
+      const tab = await activeTab();
+      if (!isWebUrl(tab.url)) throw new Error("Site controls are available on regular http or https pages.");
+      const origin = new URL(tab.url).origin;
+      await setOriginPaused(origin, message.disabled);
+      const shutdown = await isGloballyDisabled();
+      const tabs = (await chrome.tabs.query({})).filter((candidate) => isWebUrl(candidate.url) && new URL(candidate.url).origin === origin);
+      await Promise.all(tabs.map(async (candidate) => {
+        if (candidate.id !== undefined && message.disabled) requests.abort(candidate.id);
+        await (message.disabled ? clearExistingTab(candidate) : shutdown ? Promise.resolve() : restoreExistingTab(candidate));
+        if (candidate.id !== undefined) await refreshToolbarIcon(candidate.id);
+      }));
+      return toggleStateForTab(tab);
+    }
+    case "SET_GLOBAL_DISABLED": {
+      await setGloballyDisabled(message.disabled);
+      if (message.disabled) requests.abortAll();
+      await updateOpenTabs(message.disabled);
+      return toggleStateForTab(await activeTab());
+    }
     case "REQUEST_ACTIVE_SITE_ACCESS": {
       const tab = await activeTab();
       if (!chrome.permissions.addHostAccessRequest) {
@@ -145,7 +253,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
       return true;
     }
     case "INSPECT_ACTIVE_PAGE":
-      return inspect();
+      return inspect(message.request);
     case "GET_PROVIDER_CONFIG": {
       const config = await getProviderConfig();
       return config ? { ...config, apiKey: "" } : null;
@@ -159,11 +267,11 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
     }
     case "GET_PROFILE_FOR_URL":
       if (!isWebUrl(message.url)) return null;
-      return await isOriginPaused(new URL(message.url).origin) ? null : getProfile(new URL(message.url).origin);
+      return await isGloballyDisabled() || await isOriginPaused(new URL(message.url).origin) ? null : getProfile(new URL(message.url).origin);
     case "GET_SITE_STATUS": {
       const actual = await currentContext();
-      const [profile, paused] = await Promise.all([getProfile(actual.origin), isOriginPaused(actual.origin)]);
-      return { hasProfile: profile !== null, paused };
+      const [profile, paused, shutdown] = await Promise.all([getProfile(actual.origin), isOriginPaused(actual.origin), isGloballyDisabled()]);
+      return { hasProfile: profile !== null, paused, shutdown };
     }
     case "GET_ACTIVE_PROFILE": {
       const actual = await currentContext();
@@ -175,38 +283,40 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
       const actual = await currentContext();
       assertSamePageContext(actual, message.context);
       await setOriginPaused(actual.origin, message.paused);
+      const shutdown = await isGloballyDisabled();
       if (message.paused) {
         await chrome.tabs.sendMessage(actual.tabId, { type: "CONTENT_CLEAR", context: actual } satisfies ExtensionMessage);
-      } else {
+      } else if (!shutdown) {
         const profile = await getProfile(actual.origin);
         if (profile) {
           await chrome.tabs.sendMessage(actual.tabId, { type: "CONTENT_APPLY", context: actual, patch: profile.patch, mode: "approved" } satisfies ExtensionMessage);
         }
       }
-      return { hasProfile: (await getProfile(actual.origin)) !== null, paused: message.paused };
+      await refreshToolbarIcon(actual.tabId);
+      return { hasProfile: (await getProfile(actual.origin)) !== null, paused: message.paused, shutdown };
     }
     case "GENERATE_PROPOSAL": {
-      const actual = await currentContext();
+      const actual = await contextForTab(message.snapshot.context.tabId);
       assertSamePageContext(actual, message.snapshot.context);
+      await assertTweaksyEnabled(actual.origin);
       const localProposal = proposalFromSupportedIntent(message.request, message.history);
       if (localProposal) return { proposal: localProposal, context: actual, source: "local" };
       const config = await getProviderConfig();
       if (!config) throw new Error("Save your AI provider, model, and API key first.");
-      requests.get(actual.tabId)?.abort();
-      const controller = new AbortController();
-      requests.set(actual.tabId, controller);
+      const controller = requests.start(actual.tabId);
       try {
         const proposal = await generateProposal(config, message.request, message.snapshot, message.history, controller.signal, message.basePatch);
-        const latest = await currentContext();
+        const latest = await contextForTab(actual.tabId);
         assertSamePageContext(latest, actual);
         return { proposal, context: latest, source: "provider" };
       } finally {
-        if (requests.get(actual.tabId) === controller) requests.delete(actual.tabId);
+        requests.finish(actual.tabId, controller);
       }
     }
     case "APPLY_PREVIEW": {
       const actual = await currentContext();
       assertSamePageContext(actual, message.context);
+      await assertTweaksyEnabled(actual.origin);
       const response = await chrome.tabs.sendMessage(actual.tabId, {
         type: "CONTENT_APPLY",
         context: actual,
@@ -229,6 +339,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
     case "SAVE_PROFILE": {
       const actual = await currentContext();
       assertSamePageContext(actual, message.context);
+      await assertTweaksyEnabled(actual.origin);
       const permission = await chrome.permissions.contains({ origins: [`${actual.origin}/*`] });
       if (!permission) throw new Error("Ongoing access to this site was not granted, so the profile was not saved.");
       const now = new Date().toISOString();
@@ -254,9 +365,11 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
       await saveProfile(profile);
       await setOriginPaused(actual.origin, false);
       await registerOrigin(actual.origin);
+      await refreshToolbarIcon(actual.tabId);
       return { profile, report: response.data };
     }
     case "TRANSCRIBE_AUDIO": {
+      await assertTweaksyEnabled();
       const config = await getProviderConfig();
       if (!config) throw new Error("Save an OpenAI provider first.");
       return transcribeAudio(config, message.base64, message.mimeType);

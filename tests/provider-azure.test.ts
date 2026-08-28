@@ -73,7 +73,7 @@ describe("Azure OpenAI requests", () => {
       fontScale: null, lineHeight: null, letterSpacingEm: null, contentMaxWidthRem: null, headingColor: null,
       articleLayout: "swipe-cards" as const, deckControls: "unchanged" as const, deckImageSize: "unchanged" as const,
       deckLinkPosition: "unchanged" as const, colorVisionMode: "unchanged" as const, themePreset: "warm-hospitality" as const,
-      colorScheme: "unchanged" as const, contrast: "unchanged" as const, reduceMotion: false, strongFocus: false, hideSelectors: [],
+      colorScheme: "unchanged" as const, contrast: "unchanged" as const, reduceMotion: false, strongFocus: false, hideSponsoredContent: false, hideVideoPosts: false, feedFilterTerms: [], automationAssets: [], hideSelectors: [],
     };
 
     const proposal = await generateProposal(

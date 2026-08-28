@@ -27,4 +27,12 @@ describe("Harborline static surface", () => {
     expect(html).toContain('data-chat-log');
     expect(html).toContain('Free-form demo');
   });
+
+  it("offers color-safe, read-aloud, and timed focus controls", async () => {
+    const html = await readFile(path.resolve("web/index.html"), "utf8");
+    expect(html).toContain('data-assistive-mode="color-safe"');
+    expect(html).toContain('data-assistive-mode="read-aloud"');
+    expect(html).toContain('data-assistive-mode="focus"');
+    expect(html).toContain("not a replacement for a screen reader");
+  });
 });

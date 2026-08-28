@@ -672,6 +672,15 @@ button:focus-visible,
   --accent: #1769e0;
 }
 
+[data-tweaksy-demo][data-color-vision="avoid-red"] .story-art-bakery::before,
+[data-tweaksy-demo][data-color-vision="avoid-red"] .story-art-bakery::after {
+  background: linear-gradient(#ffe07a, #087f8c);
+}
+
+[data-tweaksy-demo][data-color-vision="avoid-red"] .story-art-signs::before {
+  box-shadow: 0.7rem 0.7rem 0 #1769e0;
+}
+
 [data-tweaksy-demo][data-contrast="more"] .story-card,
 [data-tweaksy-demo][data-contrast="more"] .topic-row span {
   border-color: currentColor;
@@ -690,6 +699,24 @@ button:focus-visible,
   scroll-behavior: auto !important;
   transition-duration: 0.01ms !important;
   animation-duration: 0.01ms !important;
+}
+
+[data-tweaksy-demo][data-focus-session="true"] .utility-row,
+[data-tweaksy-demo][data-focus-session="true"] .masthead-row nav,
+[data-tweaksy-demo][data-focus-session="true"] .topic-row,
+[data-tweaksy-demo][data-focus-session="true"] .section-heading,
+[data-tweaksy-demo][data-focus-session="true"] .real-site-mode,
+[data-tweaksy-demo][data-focus-session="true"] .story-reader,
+[data-tweaksy-demo][data-focus-session="true"] .journal-footer {
+  display: none;
+}
+
+[data-tweaksy-demo][data-focus-session="true"] .lead-in {
+  padding-block: clamp(1.5rem, 4vw, 3rem) 1.5rem;
+}
+
+[data-tweaksy-demo][data-focus-session="true"] .stories-section {
+  padding-bottom: 2rem;
 }
 
 .story-reader {
@@ -979,6 +1006,82 @@ button:focus-visible,
   color: #849bb2;
   font-size: 0.62rem;
   line-height: 1.45;
+}
+
+.assistive-modes {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  background: rgba(21, 42, 64, 0.7);
+  border: 1px solid rgba(154, 193, 241, 0.16);
+  border-radius: 0.85rem;
+}
+
+.assistive-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.assistive-heading > span {
+  color: #9eb4ca;
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.assistive-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.assistive-actions button {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+  padding: 0.65rem 0.45rem;
+  color: #eaf3ff;
+  text-align: left;
+  background: #172a40;
+  border: 1px solid #365979;
+  border-radius: 0.65rem;
+  cursor: pointer;
+}
+
+.assistive-actions button:hover,
+.assistive-actions button[aria-pressed="true"] {
+  background: #203f60;
+  border-color: #8ebcfd;
+}
+
+.assistive-actions button > span {
+  color: #8ebcfd;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.assistive-actions strong {
+  overflow: hidden;
+  font-size: 0.69rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistive-actions small {
+  overflow: hidden;
+  color: #9eb4ca;
+  font-size: 0.57rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistive-note {
+  margin: 0;
+  color: #849bb2;
+  font-size: 0.58rem;
+  line-height: 1.4;
 }
 
 .quick-start,

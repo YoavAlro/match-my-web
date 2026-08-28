@@ -32,10 +32,11 @@ Development began on August 28, 2026 on the `webmcp-challenge` branch. The meani
 
 - A standalone, static Tweaksy Live app with the original fictional Harborline Journal surface.
 - A visible free-form chat in the public dock that locally interprets natural-language layout requests into the same closed adaptation vocabulary, with example prompts and refinement support.
+- Three meaningful assistive workflows shared by the chat, visible controls, and WebMCP: color-safe/low-vision presentation, browser read-aloud for owned Harborline content, and a real timed focus session.
 - A scoped renderer that can convert a dense six-story feed into an accessible, keyboard-operable story deck without removing any story or link.
 - One revision-safe adaptation controller shared by the visible dock and WebMCP tools.
 - In-memory previews, explicit approval, discard, locally persisted approved designs, and restore-original behavior.
-- Five top-level JavaScript WebMCP tools registered with `document.modelContext.registerTool`.
+- Ten top-level JavaScript WebMCP tools registered with `document.modelContext.registerTool`, including semantic accessibility, read-aloud, and focus-session tools.
 - A four-tool real-page WebMCP surface injected by the Chrome extension after explicit page activation, reusing the existing arbitrary-page renderer while keeping persistence and provider access human-controlled.
 - Free-form side-panel chat for describing real-page adaptations in natural language; the agent output is normalized into the same declarative patch model.
 - Strict, closed input schemas that expose vetted visual settings only—not CSS, HTML, JavaScript, URLs, selectors, arbitrary content edits, or network access.
@@ -49,6 +50,7 @@ Development began on August 28, 2026 on the `webmcp-challenge` branch. The meani
 | --- | --- |
 | Web app | `web/`, `src/web/main.ts` |
 | Shared controller | `src/web/adaptation-controller.ts` |
+| Assistive capabilities | `src/web/assistive-controller.ts` |
 | Scoped renderer | `src/web/demo-renderer.ts` |
 | WebMCP registration | `src/web/webmcp.ts`, `src/web/webmcp-types.d.ts` |
 | Real-page WebMCP bridge | `src/real-page-webmcp.ts`, `src/main-world.ts`, `src/content.ts` |

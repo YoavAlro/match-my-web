@@ -1,5 +1,6 @@
 import { hasAdaptationChanges } from "../types";
 import type { AdaptationController, AdaptationSnapshot } from "./adaptation-controller";
+import type { AccessibilityMode, AssistiveController, ReadingScope } from "./assistive-controller";
 import { inspectTweaksySurface } from "./surface-inventory";
 
 const emptyInputSchema = {
@@ -75,7 +76,7 @@ export const previewAdaptationInputSchema = {
   additionalProperties: false,
 } as const;
 
-function stateResult(snapshot: AdaptationSnapshot): Record<string, unknown> {
+function stateResult(snapshot: AdaptationSnapshot, assistive: AssistiveController): Record<string, unknown> {
   const approved = hasAdaptationChanges(snapshot.approvedPatch);
   return {
     revision: snapshot.revision,
@@ -94,6 +95,7 @@ function stateResult(snapshot: AdaptationSnapshot): Record<string, unknown> {
     approvedDesign: snapshot.approvedPatch,
     verification: snapshot.verification,
     recentActivity: snapshot.activity.slice(0, 4),
+    assistive: assistive.getState(),
   };
 }
 
@@ -112,11 +114,12 @@ function parseClosedInput(input: unknown, toolName: string, allowedFields: reado
 export function createTweaksyWebMcpTools(
   controller: AdaptationController,
   root: HTMLElement,
+  assistive: AssistiveController,
 ): WebMcpToolDefinition[] {
   return [
     {
       name: "inspect_tweaksy_surface",
-      description: "Inspect the Harborline demo surface, available adaptation capabilities, content counts, and safety guarantees. This does not change the page.",
+      description: "Inspect the Harborline demo surface, visual and assistive capabilities, content counts, and safety guarantees. This does not change the page.",
       inputSchema: emptyInputSchema,
       annotations: { readOnlyHint: true },
       execute: async (input) => {
@@ -131,7 +134,115 @@ export function createTweaksyWebMcpTools(
       annotations: { readOnlyHint: true },
       execute: async (input) => {
         parseClosedInput(input, "get_tweaksy_state", []);
-        return stateResult(controller.getState());
+        return stateResult(controller.getState(), assistive);
+      },
+    },
+    {
+      name: "preview_tweaksy_accessibility_mode",
+      description: "Preview one vetted accessibility preset on Harborline: color-safe removes red-only cues and strengthens contrast, while low-vision enlarges type, shortens lines, strengthens focus, and reduces motion. The preview is visible and reversible but not saved. Call get_tweaksy_state first and pass its revision.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          mode: { type: "string", enum: ["color-safe", "low-vision"] },
+          expectedRevision: expectedRevisionProperty,
+        },
+        required: ["mode", "expectedRevision"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+      execute: async (rawInput) => {
+        const input = parseClosedInput(rawInput, "preview_tweaksy_accessibility_mode", ["mode", "expectedRevision"]);
+        if (input.mode !== "color-safe" && input.mode !== "low-vision") throw new Error("mode must be color-safe or low-vision.");
+        const snapshot = assistive.previewAccessibilityMode(input.mode as AccessibilityMode, input.expectedRevision as number, "webmcp");
+        return {
+          status: "accessibility_preview_ready",
+          mode: input.mode,
+          revision: snapshot.revision,
+          preview: snapshot.preview,
+          verification: snapshot.verification,
+          persisted: false,
+          nextStep: "Ask the person to inspect the visible preview, then use the dock to approve or discard it.",
+        };
+      },
+    },
+    {
+      name: "read_tweaksy_content",
+      description: "Read owned Harborline content aloud through the browser speech engine. Choose a page summary, the current story, or all headlines. This starts audible speech on the person's device, does not send content over the network, and is a reading aid rather than a replacement for a screen reader.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          scope: { type: "string", enum: ["page-summary", "current-story", "all-headlines"] },
+          rate: { type: "number", minimum: 0.8, maximum: 1.4, description: "Optional speech rate; defaults to 1." },
+        },
+        required: ["scope"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+      execute: async (rawInput) => {
+        const input = parseClosedInput(rawInput, "read_tweaksy_content", ["scope", "rate"]);
+        if (!(["page-summary", "current-story", "all-headlines"] as unknown[]).includes(input.scope)) {
+          throw new Error("scope must be page-summary, current-story, or all-headlines.");
+        }
+        const state = assistive.read(input.scope as ReadingScope, input.rate === undefined ? 1 : input.rate as number);
+        return {
+          status: "reading_started",
+          reading: state.reading,
+          networkUsed: false,
+          nextStep: "The person can stop speech from the Tweaksy dock or with stop_tweaksy_reading.",
+        };
+      },
+    },
+    {
+      name: "stop_tweaksy_reading",
+      description: "Stop Tweaksy's browser read-aloud immediately. This only cancels speech started by the page.",
+      inputSchema: emptyInputSchema,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      execute: async (input) => {
+        parseClosedInput(input, "stop_tweaksy_reading", []);
+        return { status: "reading_stopped", assistive: assistive.stopReading() };
+      },
+    },
+    {
+      name: "start_tweaksy_focus_session",
+      description: "Start a real 10, 25, or 45 minute focus session on Harborline. This creates a reversible one-story reading preview, reduces nonessential page chrome and motion, strengthens focus, and starts a visible countdown. It replaces any current unsaved preview but never saves automatically. Call get_tweaksy_state first and pass its revision.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          minutes: { type: "integer", enum: [10, 25, 45] },
+          expectedRevision: expectedRevisionProperty,
+        },
+        required: ["minutes", "expectedRevision"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+      execute: async (rawInput) => {
+        const input = parseClosedInput(rawInput, "start_tweaksy_focus_session", ["minutes", "expectedRevision"]);
+        if (input.minutes !== 10 && input.minutes !== 25 && input.minutes !== 45) throw new Error("minutes must be 10, 25, or 45.");
+        const result = assistive.startFocus(input.minutes, input.expectedRevision as number, "webmcp");
+        return {
+          status: "focus_session_started",
+          revision: result.adaptation.revision,
+          preview: result.adaptation.preview,
+          focus: result.assistive.focus,
+          persisted: false,
+          nextStep: "The person can navigate stories, approve the visual design separately, or end the timed session at any time.",
+        };
+      },
+    },
+    {
+      name: "end_tweaksy_focus_session",
+      description: "End the active focus countdown and restore nonessential Harborline page chrome. If the focus preview is still unsaved and unchanged, discard that preview and restore the last approved design. Call get_tweaksy_state first and pass its revision.",
+      inputSchema: {
+        type: "object",
+        properties: { expectedRevision: expectedRevisionProperty },
+        required: ["expectedRevision"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      execute: async (rawInput) => {
+        const input = parseClosedInput(rawInput, "end_tweaksy_focus_session", ["expectedRevision"]);
+        const result = assistive.endFocus(input.expectedRevision as number);
+        return { status: "focus_session_ended", revision: result.adaptation.revision, focus: result.assistive.focus };
       },
     },
     {
@@ -219,9 +330,10 @@ export function createTweaksyWebMcpTools(
 export async function registerTweaksyWebMcpTools(
   controller: AdaptationController,
   root: HTMLElement,
+  assistive: AssistiveController,
 ): Promise<number> {
   if (typeof document.modelContext?.registerTool !== "function") return 0;
-  const tools = createTweaksyWebMcpTools(controller, root);
+  const tools = createTweaksyWebMcpTools(controller, root, assistive);
   for (const tool of tools) await document.modelContext.registerTool(tool);
   return tools.length;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PATCH } from "../../src/types";
 import { interpretHostedChatRequest } from "../../src/web/chat-intent";
+import { interpretAssistiveChatAction } from "../../src/web/assistive-controller";
 
 describe("Tweaksy Live free-form chat", () => {
   it("turns a broad reading request into a coordinated safe preview", () => {
@@ -46,5 +47,28 @@ describe("Tweaksy Live free-form chat", () => {
 
   it("declines requests outside the visual adaptation vocabulary", () => {
     expect(interpretHostedChatRequest("Book me a ferry ticket", DEFAULT_PATCH)).toBeNull();
+  });
+});
+
+describe("Tweaksy Live assistive chat", () => {
+  it("routes disability and focus language to semantic browser actions", () => {
+    expect(interpretAssistiveChatAction("I'm color blind. Avoid red-only cues.")).toEqual({
+      kind: "accessibility-mode",
+      mode: "color-safe",
+    });
+    expect(interpretAssistiveChatAction("I am blind, read this page to me")).toEqual({
+      kind: "read",
+      scope: "page-summary",
+    });
+    expect(interpretAssistiveChatAction("Help me focus for 45 minutes")).toEqual({
+      kind: "start-focus",
+      minutes: 45,
+    });
+  });
+
+  it("distinguishes current-story reading and stop controls", () => {
+    expect(interpretAssistiveChatAction("Read this current story to me")).toEqual({ kind: "read", scope: "current-story" });
+    expect(interpretAssistiveChatAction("Stop reading")).toEqual({ kind: "stop-reading" });
+    expect(interpretAssistiveChatAction("End focus mode")).toEqual({ kind: "end-focus" });
   });
 });

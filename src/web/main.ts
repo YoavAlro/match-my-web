@@ -7,6 +7,11 @@ import { HarborlineRenderer } from "./demo-renderer";
 import { createApprovedDesignStorage } from "./storage";
 import { registerTweaksyWebMcpTools } from "./webmcp";
 import { interpretHostedChatRequest } from "./chat-intent";
+import {
+  AssistiveController,
+  interpretAssistiveChatAction,
+  type AssistiveSnapshot,
+} from "./assistive-controller";
 
 function requiredElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -50,12 +55,19 @@ const chatForm = requiredElement<HTMLFormElement>("[data-chat-form]");
 const chatInput = requiredElement<HTMLTextAreaElement>("[data-chat-input]");
 const chatSend = requiredElement<HTMLButtonElement>("[data-chat-send]");
 const chatSuggestions = [...document.querySelectorAll<HTMLButtonElement>("[data-chat-suggestion]")];
+const assistiveButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-assistive-mode]")];
+const assistiveStatus = requiredElement<HTMLElement>("[data-assistive-status]");
+const readLabel = requiredElement<HTMLElement>("[data-read-label]");
+const focusLabel = requiredElement<HTMLElement>("[data-focus-label]");
+const focusDetail = requiredElement<HTMLElement>("[data-focus-detail]");
 
 const controller = new AdaptationController(
   new HarborlineRenderer(root),
   createApprovedDesignStorage(),
 );
+const assistive = new AssistiveController(controller, root);
 let currentState = controller.getState();
+let currentAssistiveState = assistive.getState();
 
 function describePatch(patch: AdaptationPatch): string[] {
   const details: string[] = [];
@@ -149,6 +161,53 @@ function setChatBusy(busy: boolean): void {
   chatForm.setAttribute("aria-busy", String(busy));
 }
 
+function formatRemaining(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function renderAssistive(snapshot: AssistiveSnapshot): void {
+  currentAssistiveState = snapshot;
+  const readButton = assistiveButtons.find((button) => button.dataset.assistiveMode === "read-aloud");
+  const focusButton = assistiveButtons.find((button) => button.dataset.assistiveMode === "focus");
+  readLabel.textContent = snapshot.reading.active ? "Stop reading" : "Read aloud";
+  readButton?.setAttribute("aria-pressed", String(snapshot.reading.active));
+  focusLabel.textContent = snapshot.focus.active ? formatRemaining(snapshot.focus.remainingSeconds) : "Focus 25";
+  focusDetail.textContent = snapshot.focus.active ? "End focus session" : "One calm story";
+  focusButton?.setAttribute("aria-pressed", String(snapshot.focus.active));
+  assistiveStatus.textContent = snapshot.reading.active
+    ? "Reading now"
+    : snapshot.focus.active
+      ? `${formatRemaining(snapshot.focus.remainingSeconds)} left`
+      : "Ready";
+}
+
+function handleAssistiveAction(request: string): boolean {
+  const action = interpretAssistiveChatAction(request);
+  if (!action) return false;
+  if (action.kind === "stop-reading") {
+    assistive.stopReading();
+    appendChatMessage("assistant", "Read aloud stopped.");
+  } else if (action.kind === "read") {
+    assistive.read(action.scope);
+    appendChatMessage("assistant", "I’m reading the Harborline content aloud with your browser voice. You can ask me to stop at any time. This aid does not replace a full screen reader.");
+  } else if (action.kind === "accessibility-mode") {
+    const snapshot = assistive.previewAccessibilityMode(action.mode, currentState.revision, "human");
+    const label = action.mode === "color-safe" ? "color-safe presentation" : "low-vision reading layout";
+    appendChatMessage("assistant", `I made a reversible ${label} preview. All ${snapshot.verification.storyCount} stories remain intact; approve it, refine it, or discard it.`);
+    approveButton.focus();
+  } else if (action.kind === "start-focus") {
+    const result = assistive.startFocus(action.minutes, currentState.revision, "human");
+    appendChatMessage("assistant", `Your ${action.minutes}-minute focus session is running. I reduced the page to one calm story with less motion; the design is still only a preview.`);
+    if (result.adaptation.preview) approveButton.focus();
+  } else {
+    assistive.endFocus(currentState.revision);
+    appendChatMessage("assistant", "Focus session ended. The page chrome is back, and any unchanged focus preview was discarded.");
+    chatInput.focus();
+  }
+  return true;
+}
+
 function handleChatRequest(rawRequest: string): void {
   const request = rawRequest.trim();
   if (!request) return;
@@ -172,10 +231,13 @@ function handleChatRequest(rawRequest: string): void {
     }
     if (/^(?:restore|reset|go back to)(?:\s+(?:the )?(?:original|default)(?: page| design)?)?[.!]?$/i.test(request)) {
       controller.restoreOriginal(currentState.revision);
+      if (currentAssistiveState.focus.active) assistive.endFocus(currentState.revision);
       appendChatMessage("assistant", "The original Harborline design is restored.");
       chatInput.focus();
       return;
     }
+
+    if (handleAssistiveAction(request)) return;
 
     const proposal = interpretHostedChatRequest(request, currentState.effectivePatch);
     if (!proposal) {
@@ -225,6 +287,34 @@ for (const suggestion of chatSuggestions) {
   });
 }
 
+for (const button of assistiveButtons) {
+  button.addEventListener("click", () => runAction(() => {
+    const mode = button.dataset.assistiveMode;
+    if (mode === "color-safe") {
+      const snapshot = assistive.previewAccessibilityMode("color-safe", currentState.revision, "human");
+      appendChatMessage("assistant", `Color-safe preview ready. Contrast is stronger and important cues no longer rely on red alone; all ${snapshot.verification.storyCount} stories remain intact.`);
+      approveButton.focus();
+    } else if (mode === "read-aloud") {
+      if (currentAssistiveState.reading.active) {
+        assistive.stopReading();
+        appendChatMessage("assistant", "Read aloud stopped.");
+      } else {
+        assistive.read("page-summary");
+        appendChatMessage("assistant", "I’m reading a page summary with your browser voice. This is a reading aid, not a replacement for a screen reader.");
+      }
+    } else if (mode === "focus") {
+      if (currentAssistiveState.focus.active) {
+        assistive.endFocus(currentState.revision);
+        appendChatMessage("assistant", "Focus session ended. The page chrome is back.");
+      } else {
+        assistive.startFocus(25, currentState.revision, "human");
+        appendChatMessage("assistant", "Your 25-minute focus session is running with one calm story and a visible countdown.");
+        approveButton.focus();
+      }
+    }
+  }));
+}
+
 previewButton.addEventListener("click", () => runAction(() => {
   controller.previewAdaptation({
     expectedRevision: currentState.revision,
@@ -243,6 +333,7 @@ approveButton.addEventListener("click", () => runAction(() => {
 
 discardButton.addEventListener("click", () => runAction(() => {
   controller.discardPreview(currentState.revision);
+  if (currentAssistiveState.focus.active) assistive.endFocus(currentState.revision);
   previewButton.focus();
 }));
 
@@ -252,6 +343,7 @@ restoreButton.addEventListener("click", () => runAction(() => {
 }));
 
 controller.subscribe(render);
+assistive.subscribe(renderAssistive);
 
 const currentYear = document.querySelector<HTMLElement>("[data-current-year]");
 if (currentYear) currentYear.textContent = String(new Date().getFullYear());
@@ -260,7 +352,7 @@ document.documentElement.classList.add("tweaksy-live-ready");
 const webMcpStatus = requiredElement<HTMLElement>("[data-webmcp-status]");
 const connectionDot = requiredElement<HTMLElement>("[data-connection-dot]");
 try {
-  const registeredToolCount = await registerTweaksyWebMcpTools(controller, root);
+  const registeredToolCount = await registerTweaksyWebMcpTools(controller, root, assistive);
   if (registeredToolCount > 0) {
     webMcpStatus.textContent = `${registeredToolCount} WebMCP tools ready · no API key`;
     connectionDot.title = `${registeredToolCount} WebMCP tools ready`;
@@ -276,4 +368,4 @@ try {
   console.error("Tweaksy WebMCP registration failed", error);
 }
 
-export { controller };
+export { assistive, controller };

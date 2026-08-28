@@ -6,6 +6,7 @@ export interface TweaksySurfaceInventory {
   storyLinkCount: number;
   headings: string[];
   adaptationCapabilities: string[];
+  assistiveCapabilities: string[];
   guarantees: string[];
 }
 
@@ -30,11 +31,17 @@ export function inspectTweaksySurface(root: HTMLElement): TweaksySurfaceInventor
       "reduce motion and strengthen focus indicators",
       "apply vetted color and editorial themes",
     ],
+    assistiveCapabilities: [
+      "preview a color-safe or low-vision presentation",
+      "read a page summary, current story, or all headlines aloud through the browser",
+      "start or end a visible 10, 25, or 45 minute focus session",
+    ],
     guarantees: [
       "Adaptations are scoped to the Harborline demo surface.",
       "Preview changes remain in memory until a person approves them.",
       "All six stories and their links remain in the document.",
       "Tools cannot inject HTML, JavaScript, CSS, URLs, or selectors.",
+      "Read aloud stays on the device and is presented as an aid, not a screen-reader replacement.",
     ],
   };
 }

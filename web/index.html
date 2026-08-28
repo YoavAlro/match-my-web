@@ -209,7 +209,7 @@
           <li><span>3</span> Preview, then approve</li>
         </ol>
         <div class="real-site-actions">
-          <a class="real-site-link" href="https://github.com/YoavAlro/match-my-web/releases/download/v0.12.1/tweaksy-0.12.1-chrome.zip">
+          <a class="real-site-link" href="https://github.com/YoavAlro/match-my-web/releases/download/v0.13.0/tweaksy-0.13.0-chrome.zip">
             Download Chrome demo <span aria-hidden="true">↓</span>
           </a>
           <small>Unzip, then choose “Load unpacked” in <code>chrome://extensions</code>.</small>
@@ -241,13 +241,13 @@
           </div>
           <div class="chat-log" data-chat-log role="log" aria-live="polite" aria-relevant="additions">
             <div class="chat-bubble chat-bubble-assistant">
-              Tell me how this page should feel. Try “make it calmer with larger text” or “show one story at a time in dark mode.”
+              Tell me what would help. Try “I’m color blind,” “read this page to me,” or “help me focus for 25 minutes.”
             </div>
           </div>
           <div class="chat-suggestions" aria-label="Example requests">
-            <button type="button" data-chat-suggestion="Make this calmer and easier to read">Calmer reading</button>
-            <button type="button" data-chat-suggestion="Show one story at a time in dark mode">Story deck</button>
-            <button type="button" data-chat-suggestion="Use high contrast, strong keyboard focus, and less motion">Accessible focus</button>
+            <button type="button" data-chat-suggestion="I’m color blind. Avoid red-only cues.">Color safe</button>
+            <button type="button" data-chat-suggestion="Read this page to me">Read aloud</button>
+            <button type="button" data-chat-suggestion="Help me focus for 25 minutes">Focus time</button>
           </div>
           <form class="chat-composer" data-chat-form>
             <label class="visually-hidden" for="tweaksy-chat-input">Describe how this page should change</label>
@@ -255,6 +255,31 @@
             <button type="submit" data-chat-send>Preview</button>
           </form>
           <p class="chat-note">No account or key. This local demo understands Tweaksy’s safe layout vocabulary; the extension brings the same conversation to permitted websites.</p>
+        </section>
+
+        <section class="assistive-modes" aria-labelledby="assistive-title">
+          <div class="assistive-heading">
+            <p id="assistive-title" class="dock-label">Assistive modes</p>
+            <span data-assistive-status>Ready</span>
+          </div>
+          <div class="assistive-actions">
+            <button type="button" data-assistive-mode="color-safe">
+              <span aria-hidden="true">◐</span>
+              <strong>Color safe</strong>
+              <small>No red-only cues</small>
+            </button>
+            <button type="button" data-assistive-mode="read-aloud">
+              <span aria-hidden="true">◖))</span>
+              <strong data-read-label>Read aloud</strong>
+              <small>Browser voice</small>
+            </button>
+            <button type="button" data-assistive-mode="focus">
+              <span aria-hidden="true">◷</span>
+              <strong data-focus-label>Focus 25</strong>
+              <small data-focus-detail>One calm story</small>
+            </button>
+          </div>
+          <p class="assistive-note">Read aloud is a browser aid, not a replacement for a screen reader.</p>
         </section>
 
         <section class="quick-start" aria-labelledby="quick-start-title">

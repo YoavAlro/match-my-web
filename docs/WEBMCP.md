@@ -6,11 +6,11 @@ Tweaksy uses WebMCP in two complementary modes. The hosted Harborline surface is
 
 1. A person opens the fictional Harborline Journal page and sees the same six stories the agent can inspect.
 2. The agent calls a read tool to inspect capabilities and the current revision.
-3. The agent proposes a vetted visual adaptation. Tweaksy renders it as an unsaved preview and returns preservation evidence.
+3. The agent proposes a vetted visual adaptation or invokes a semantic assistive capability: color-safe/low-vision preview, browser read-aloud, or timed focus.
 4. The person reviews the actual page and either approves or discards the preview in the persistent dock.
 5. Approval stores only the validated declarative patch in local storage for this origin. Restore removes it.
 
-The manual “One story at a time” action invokes the exact same controller as `preview_tweaksy_adaptation`. There is no parallel agent-only state path.
+The free-form chat, assistive-mode buttons, and WebMCP tools invoke the same adaptation and assistive controllers. There is no parallel agent-only state path.
 
 ## Tool surface
 
@@ -18,11 +18,18 @@ The manual “One story at a time” action invokes the exact same controller as
 | --- | --- | --- |
 | `inspect_tweaksy_surface` | Read | Returns the demo inventory, supported adaptation capabilities, content counts, and guarantees. |
 | `get_tweaksy_state` | Read | Returns revision, effective/approved design, pending preview, verification, and recent activity. |
+| `preview_tweaksy_accessibility_mode` | Reversible write | Applies a fixed color-safe or low-vision preview through the normal adaptation controller. |
+| `read_tweaksy_content` | Audible local action | Extracts owned Harborline content and starts the browser speech engine; no network is used. |
+| `stop_tweaksy_reading` | Restorative local action | Cancels speech started by the page. |
+| `start_tweaksy_focus_session` | Timed reversible write | Starts a 10/25/45 minute countdown and a one-story, reduced-distraction preview. |
+| `end_tweaksy_focus_session` | Restorative write | Ends the timer, restores page chrome, and discards an unchanged focus preview. |
 | `preview_tweaksy_adaptation` | Reversible write | Applies a vetted preview in memory. It never persists and replaces any previous preview. |
 | `discard_tweaksy_preview` | Restorative write | Removes the preview and reapplies the last approved design. |
 | `approve_tweaksy_preview` | Local persistent write | Saves the exact current preview to this origin’s browser storage. Its description requires an explicit approval request. |
 
 Tools are registered in top-level page JavaScript after feature detection. Browsers without WebMCP retain the complete human workflow.
+
+Read aloud deliberately operates only on the fictional first-party Harborline content. It is presented as a browser reading aid, not as a replacement for a screen reader, semantic HTML, or accessibility testing. Focus mode hides only nonessential Harborline chrome with a scoped data attribute; it does not delete content.
 
 ## Real-site extension mode
 
@@ -63,6 +70,6 @@ Run the complete local gate:
 npm run check
 ```
 
-The WebMCP-specific tests cover hosted controller state transitions, persistence, rollback, stale revisions, unsafe fields, schema closure, top-level registration, real-page bridge validation, the no-persistence extension boundary, shared execution, and unsupported-browser fallback.
+The WebMCP-specific tests cover hosted controller state transitions, assistive chat routing, semantic mode execution, timed-focus cleanup, persistence, rollback, stale revisions, unsafe fields, schema closure, top-level registration, real-page bridge validation, the no-persistence extension boundary, shared execution, and unsupported-browser fallback.
 
 The implementation follows OpenAI’s [Site tools guide](https://learn.chatgpt.com/docs/webmcp): narrow inputs, explicit side effects, verifiable results, existing application permissions, and preserved human controls.

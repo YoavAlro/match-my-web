@@ -677,7 +677,9 @@ button:focus-visible,
 }
 
 [data-tweaksy-demo][data-color-vision="avoid-blue"] .story-art-ferry {
-  background: linear-gradient(#d6a766 0 38%, #a88457 38% 68%, #5d492f 68%);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 0.65rem, #d8be7c55 0.65rem 0.82rem),
+    linear-gradient(#d6a766 0 38%, #a88457 38% 68%, #5d492f 68%);
 }
 
 [data-tweaksy-demo][data-color-vision="avoid-blue"] .story-art-pool {

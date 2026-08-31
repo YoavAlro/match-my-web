@@ -94,6 +94,11 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       affectedElements += remapped;
       details.push(`Remapped red interface colors on ${remapped} element${remapped === 1 ? "" : "s"}.`);
     }
+    if (patch?.colorVisionMode === "avoid-blue") {
+      const remapped = applyBlueAvoidance();
+      affectedElements += remapped;
+      details.push(`Remapped blue interface colors on ${remapped} element${remapped === 1 ? "" : "s"}.`);
+    }
     if (patch?.hideSponsoredContent || patch?.hideVideoPosts || patch?.feedFilterTerms?.length || patch?.automationAssets?.length) {
       const feedFilterTerms = patch.feedFilterTerms ?? [];
       const automationAssets = patch.automationAssets ?? [];
@@ -628,6 +633,22 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       : `rgb(${nextRed}, ${nextGreen}, ${nextBlue})`;
   }
 
+  function blueReplacement(value: string): string | null {
+    const match = value.match(/^rgba?\(\s*(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)(?:\D+(\d*(?:\.\d+)?))?\s*\)$/i);
+    if (!match) return null;
+    const red = Number(match[1]);
+    const green = Number(match[2]);
+    const blue = Number(match[3]);
+    const alpha = match[4] === undefined || match[4] === "" ? 1 : Number(match[4]);
+    if (alpha === 0 || blue < 90 || blue <= red * 1.15 || blue <= green * 1.08) return null;
+    const nextRed = Math.min(255, Math.round(red + blue * 0.78));
+    const nextGreen = Math.min(255, Math.round(green + blue * 0.42));
+    const nextBlue = Math.min(255, Math.round(blue * 0.12 + green * 0.18));
+    return alpha < 1
+      ? `rgba(${nextRed}, ${nextGreen}, ${nextBlue}, ${alpha})`
+      : `rgb(${nextRed}, ${nextGreen}, ${nextBlue})`;
+  }
+
   function remapRedIn(root: ParentNode): void {
     const elements: StyledElement[] = [];
     if (root instanceof HTMLElement || root instanceof SVGElement) elements.push(root);
@@ -657,6 +678,53 @@ if (!window.__MATCH_MY_WEB_CONTENT__) {
       for (const record of records) {
         for (const node of record.addedNodes) {
           if (node instanceof HTMLElement || node instanceof SVGElement) remapRedIn(node);
+        }
+      }
+    });
+    colorObserver.observe(document.documentElement, { childList: true, subtree: true });
+    return changedColors.size;
+  }
+
+  function applyBlueAvoidance(): number {
+    const elements: StyledElement[] = [];
+    elements.push(...Array.from(document.querySelectorAll<StyledElement>("*:not(script):not(style):not(noscript):not(template)")).slice(0, 2500));
+    const properties = ["color", "background-color", "border-top-color", "border-right-color", "border-bottom-color", "border-left-color", "fill", "stroke"];
+    for (const element of elements) {
+      const computed = getComputedStyle(element);
+      for (const property of properties) {
+        const replacement = blueReplacement(computed.getPropertyValue(property));
+        if (!replacement) continue;
+        let saved = changedColors.get(element);
+        if (!saved) {
+          saved = new Map();
+          changedColors.set(element, saved);
+        }
+        if (!saved.has(property)) {
+          saved.set(property, { value: element.style.getPropertyValue(property), priority: element.style.getPropertyPriority(property) });
+        }
+        element.style.setProperty(property, replacement, "important");
+      }
+    }
+    colorObserver = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node instanceof HTMLElement || node instanceof SVGElement) {
+            const descendants = [node, ...Array.from(node.querySelectorAll<StyledElement>("*:not(script):not(style):not(noscript):not(template)"))];
+            for (const element of descendants) {
+              const computed = getComputedStyle(element);
+              for (const property of properties) {
+                const replacement = blueReplacement(computed.getPropertyValue(property));
+                if (!replacement) continue;
+                let saved = changedColors.get(element);
+                if (!saved) {
+                  saved = new Map();
+                  changedColors.set(element, saved);
+                }
+                if (!saved.has(property)) saved.set(property, { value: element.style.getPropertyValue(property), priority: element.style.getPropertyPriority(property) });
+                element.style.setProperty(property, replacement, "important");
+              }
+            }
+          }
         }
       }
     });

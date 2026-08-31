@@ -90,7 +90,7 @@ if (!window.__MATCH_MY_WEB_SHADOW_HOOK__) {
       deckControls: input.articleLayout === "swipe-cards" && input.deckControls === "sides" ? "sides" : "unchanged",
       deckImageSize: input.articleLayout === "swipe-cards" && input.deckImageSize === "compact" ? "compact" : "unchanged",
       deckLinkPosition: input.articleLayout === "swipe-cards" && input.deckLinkPosition === "footer" ? "footer" : "unchanged",
-      colorVisionMode: input.colorVisionMode === "avoid-red" ? "avoid-red" : "unchanged",
+      colorVisionMode: input.colorVisionMode === "avoid-red" || input.colorVisionMode === "avoid-blue" ? input.colorVisionMode : "unchanged",
       themePreset: input.themePreset === "warm-hospitality"
         || input.themePreset === "clean-minimal"
         || input.themePreset === "bold-dark"

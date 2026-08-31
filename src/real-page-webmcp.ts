@@ -67,7 +67,7 @@ export const realPagePreviewInputSchema = {
         deckControls: { type: "string", enum: ["unchanged", "sides"] },
         deckImageSize: { type: "string", enum: ["unchanged", "compact"] },
         deckLinkPosition: { type: "string", enum: ["unchanged", "footer"] },
-        colorVisionMode: { type: "string", enum: ["unchanged", "avoid-red"] },
+        colorVisionMode: { type: "string", enum: ["unchanged", "avoid-red", "avoid-blue"] },
         themePreset: { type: "string", enum: ["unchanged", "warm-hospitality", "clean-minimal", "bold-dark", "paper-editorial"] },
         colorScheme: { type: "string", enum: ["unchanged", "light", "dark"] },
         contrast: { type: "string", enum: ["unchanged", "more"] },
@@ -140,7 +140,7 @@ function validateChanges(input: unknown): Partial<AdaptationPatch> {
       case "deckControls": result.deckControls = enumValue(value, field, ["unchanged", "sides"]); break;
       case "deckImageSize": result.deckImageSize = enumValue(value, field, ["unchanged", "compact"]); break;
       case "deckLinkPosition": result.deckLinkPosition = enumValue(value, field, ["unchanged", "footer"]); break;
-      case "colorVisionMode": result.colorVisionMode = enumValue(value, field, ["unchanged", "avoid-red"]); break;
+      case "colorVisionMode": result.colorVisionMode = enumValue(value, field, ["unchanged", "avoid-red", "avoid-blue"]); break;
       case "themePreset": result.themePreset = enumValue(value, field, ["unchanged", "warm-hospitality", "clean-minimal", "bold-dark", "paper-editorial"]); break;
       case "colorScheme": result.colorScheme = enumValue(value, field, ["unchanged", "light", "dark"]); break;
       case "contrast": result.contrast = enumValue(value, field, ["unchanged", "more"]); break;

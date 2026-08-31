@@ -300,7 +300,7 @@ function patchEntries(proposal: Proposal): Array<[string, string]> {
     ["Deck controls", proposal.patch.deckControls === "sides" ? "Beside the cards" : "Unchanged"],
     ["Card images", proposal.patch.deckImageSize === "compact" ? "Compact" : "Unchanged"],
     ["Open article link", proposal.patch.deckLinkPosition === "footer" ? "Card footer" : "Unchanged"],
-    ["Red colors", proposal.patch.colorVisionMode === "avoid-red" ? "Remapped to blue/teal" : "Unchanged"],
+    ["Color vision", proposal.patch.colorVisionMode === "avoid-red" ? "Red remapped to blue/teal" : proposal.patch.colorVisionMode === "avoid-blue" ? "Blue remapped to warm accents" : "Unchanged"],
     ["Visual theme", proposal.patch.themePreset === "unchanged" ? "Unchanged" : proposal.patch.themePreset.replace(/-/g, " ")],
     ["Color scheme", proposal.patch.colorScheme],
     ["Contrast", proposal.patch.contrast],

@@ -46,6 +46,14 @@ export function proposalFromSupportedIntent(request: string, history: ChatTurn[]
     changes.push(isHebrew ? "החלפת צבעי ממשק אדומים בחלופות כחולות וטורקיז" : "Remap red interface colors to blue and teal alternatives");
   }
 
+  const cannotSeeBlue = /\b(?:without|avoid|remove|replace|cannot see|can't see|do not use|don't use)\b[^.]{0,50}\bblue\b/i.test(lower)
+    || /\bblue\b[^.]{0,50}\b(?:cannot see|can't see|color blind|colour blind)\b/i.test(lower)
+    || /(?:בלי|ללא|לא רואה|להחליף|הסר)[^.]{0,50}(?:כחול|הצבע הכחול)/i.test(effectiveText);
+  if (isRequest && cannotSeeBlue) {
+    patch.colorVisionMode = "avoid-blue";
+    changes.push(isHebrew ? "החלפת צבעי ממשק כחולים בחלופות חמות ובסימנים שאינם תלויי צבע" : "Remap blue interface colors to warm alternatives with non-color cues");
+  }
+
   if (isRequest && !isQuestionOnly) {
     if (/\b(?:airbnb|aribnb|air-bnb|air bnb)\b/i.test(effectiveText)) {
       patch.themePreset = "warm-hospitality";

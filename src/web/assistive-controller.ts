@@ -1,6 +1,6 @@
 import type { PreviewSource, AdaptationController, AdaptationSnapshot } from "./adaptation-controller";
 
-export type AccessibilityMode = "color-safe" | "low-vision";
+export type AccessibilityMode = "color-safe" | "blue-safe" | "low-vision";
 export type ReadingScope = "page-summary" | "current-story" | "all-headlines";
 
 export interface AssistiveSnapshot {
@@ -37,6 +37,10 @@ const MODE_PRESETS = {
   "color-safe": {
     summary: "Color-safe presentation with stronger contrast and no red-only cues",
     changes: { colorVisionMode: "avoid-red", contrast: "more", strongFocus: true },
+  },
+  "blue-safe": {
+    summary: "Blue-safe presentation with warm high-contrast accents and non-color cues",
+    changes: { colorVisionMode: "avoid-blue", contrast: "more", strongFocus: true },
   },
   "low-vision": {
     summary: "Low-vision reading preview with larger type, shorter lines, and stronger focus",

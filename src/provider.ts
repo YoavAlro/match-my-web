@@ -17,7 +17,7 @@ Return JSON only with this exact shape:
     "deckControls": "unchanged" | "sides",
     "deckImageSize": "unchanged" | "compact",
     "deckLinkPosition": "unchanged" | "footer",
-    "colorVisionMode": "unchanged" | "avoid-red",
+    "colorVisionMode": "unchanged" | "avoid-red" | "avoid-blue",
     "themePreset": "unchanged" | "warm-hospitality" | "clean-minimal" | "bold-dark" | "paper-editorial",
     "colorScheme": "unchanged" | "light" | "dark",
     "contrast": "unchanged" | "more",

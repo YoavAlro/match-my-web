@@ -112,7 +112,7 @@ export function validatePatch(input: unknown): AdaptationPatch {
     deckControls: value.deckControls === "sides" ? "sides" : "unchanged",
     deckImageSize: value.deckImageSize === "compact" ? "compact" : "unchanged",
     deckLinkPosition: value.deckLinkPosition === "footer" ? "footer" : "unchanged",
-    colorVisionMode: value.colorVisionMode === "avoid-red" ? "avoid-red" : "unchanged",
+    colorVisionMode: value.colorVisionMode === "avoid-red" || value.colorVisionMode === "avoid-blue" ? value.colorVisionMode : "unchanged",
     themePreset: value.themePreset === "warm-hospitality"
       || value.themePreset === "clean-minimal"
       || value.themePreset === "bold-dark"

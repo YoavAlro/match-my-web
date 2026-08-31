@@ -37,7 +37,7 @@ export const previewAdaptationInputSchema = {
         deckControls: { type: "string", enum: ["unchanged", "sides"] },
         deckImageSize: { type: "string", enum: ["unchanged", "compact"] },
         deckLinkPosition: { type: "string", enum: ["unchanged", "footer"] },
-        colorVisionMode: { type: "string", enum: ["unchanged", "avoid-red"] },
+        colorVisionMode: { type: "string", enum: ["unchanged", "avoid-red", "avoid-blue"] },
         themePreset: { type: "string", enum: ["unchanged", "warm-hospitality", "clean-minimal", "bold-dark", "paper-editorial"] },
         colorScheme: { type: "string", enum: ["unchanged", "light", "dark"] },
         contrast: { type: "string", enum: ["unchanged", "more"] },
@@ -139,11 +139,11 @@ export function createTweaksyWebMcpTools(
     },
     {
       name: "preview_tweaksy_accessibility_mode",
-      description: "Preview one vetted accessibility preset on Harborline: color-safe removes red-only cues and strengthens contrast, while low-vision enlarges type, shortens lines, strengthens focus, and reduces motion. The preview is visible and reversible but not saved. Call get_tweaksy_state first and pass its revision.",
+      description: "Preview one vetted accessibility preset on Harborline: color-safe removes red-only cues, blue-safe avoids blue-dependent presentation, and low-vision enlarges type, shortens lines, strengthens focus, and reduces motion. The preview is visible and reversible but not saved. Call get_tweaksy_state first and pass its revision.",
       inputSchema: {
         type: "object",
         properties: {
-          mode: { type: "string", enum: ["color-safe", "low-vision"] },
+          mode: { type: "string", enum: ["color-safe", "blue-safe", "low-vision"] },
           expectedRevision: expectedRevisionProperty,
         },
         required: ["mode", "expectedRevision"],
@@ -152,7 +152,7 @@ export function createTweaksyWebMcpTools(
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       execute: async (rawInput) => {
         const input = parseClosedInput(rawInput, "preview_tweaksy_accessibility_mode", ["mode", "expectedRevision"]);
-        if (input.mode !== "color-safe" && input.mode !== "low-vision") throw new Error("mode must be color-safe or low-vision.");
+        if (input.mode !== "color-safe" && input.mode !== "blue-safe" && input.mode !== "low-vision") throw new Error("mode must be color-safe, blue-safe, or low-vision.");
         const snapshot = assistive.previewAccessibilityMode(input.mode as AccessibilityMode, input.expectedRevision as number, "webmcp");
         return {
           status: "accessibility_preview_ready",

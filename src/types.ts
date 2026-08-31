@@ -14,7 +14,7 @@ export type ArticleLayout = "unchanged" | "swipe-cards";
 export type DeckControls = "unchanged" | "sides";
 export type DeckImageSize = "unchanged" | "compact";
 export type DeckLinkPosition = "unchanged" | "footer";
-export type ColorVisionMode = "unchanged" | "avoid-red";
+export type ColorVisionMode = "unchanged" | "avoid-red" | "avoid-blue";
 export type ThemePreset = "unchanged" | "warm-hospitality" | "clean-minimal" | "bold-dark" | "paper-editorial";
 
 export interface ChatTurn {

@@ -166,7 +166,7 @@ export function parseSafeAdaptationChanges(input: unknown): Record<string, unkno
       case "deckControls": parsed[field] = requireEnum(raw, field, ["unchanged", "sides"]); break;
       case "deckImageSize": parsed[field] = requireEnum(raw, field, ["unchanged", "compact"]); break;
       case "deckLinkPosition": parsed[field] = requireEnum(raw, field, ["unchanged", "footer"]); break;
-      case "colorVisionMode": parsed[field] = requireEnum(raw, field, ["unchanged", "avoid-red"]); break;
+      case "colorVisionMode": parsed[field] = requireEnum(raw, field, ["unchanged", "avoid-red", "avoid-blue"]); break;
       case "themePreset": parsed[field] = requireEnum(raw, field, ["unchanged", "warm-hospitality", "clean-minimal", "bold-dark", "paper-editorial"]); break;
       case "colorScheme": parsed[field] = requireEnum(raw, field, ["unchanged", "light", "dark"]); break;
       case "contrast": parsed[field] = requireEnum(raw, field, ["unchanged", "more"]); break;

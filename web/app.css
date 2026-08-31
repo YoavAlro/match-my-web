@@ -666,6 +666,24 @@ button:focus-visible,
   --accent: #1769e0;
 }
 
+[data-tweaksy-demo][data-color-vision="avoid-blue"] {
+  --accent: #a7472f;
+}
+
+[data-tweaksy-demo][data-color-vision="avoid-blue"] a,
+[data-tweaksy-demo][data-color-vision="avoid-blue"] .story-meta span {
+  text-decoration-thickness: 0.14em;
+  text-underline-offset: 0.16em;
+}
+
+[data-tweaksy-demo][data-color-vision="avoid-blue"] .story-art-ferry {
+  background: linear-gradient(#d6a766 0 38%, #a88457 38% 68%, #5d492f 68%);
+}
+
+[data-tweaksy-demo][data-color-vision="avoid-blue"] .story-art-pool {
+  background: repeating-radial-gradient(ellipse at 18% 52%, #d4c48d 0 0.8rem, #8e6b38 1rem 2rem);
+}
+
 [data-tweaksy-demo][data-color-vision="avoid-red"] .story-art-bakery::before,
 [data-tweaksy-demo][data-color-vision="avoid-red"] .story-art-bakery::after {
   background: linear-gradient(#ffe07a, #087f8c);
@@ -681,7 +699,7 @@ button:focus-visible,
 }
 
 [data-tweaksy-demo][data-strong-focus="true"] :focus-visible {
-  outline: 0.25rem solid #075fd8;
+  outline: 0.25rem solid var(--accent);
   outline-offset: 0.28rem;
   box-shadow: 0 0 0 0.22rem #fff;
 }

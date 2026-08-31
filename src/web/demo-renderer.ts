@@ -52,6 +52,8 @@ export class HarborlineRenderer implements AdaptationRenderer {
       || patch.colorScheme !== "unchanged"
       || patch.contrast !== "unchanged"
       || patch.colorVisionMode !== "unchanged"
+      || patch.hideDemoAds
+      || patch.deemphasizeImages
       || patch.reduceMotion
       || patch.strongFocus);
     this.root.dataset.layout = patch.articleLayout;
@@ -63,6 +65,8 @@ export class HarborlineRenderer implements AdaptationRenderer {
     this.root.dataset.colorVision = patch.colorVisionMode;
     this.root.dataset.reduceMotion = String(patch.reduceMotion);
     this.root.dataset.strongFocus = String(patch.strongFocus);
+    this.root.dataset.demoAds = patch.hideDemoAds ? "hidden" : "visible";
+    this.root.dataset.deemphasizeImages = String(patch.deemphasizeImages);
     this.setVariable("--tweaksy-font-scale", patch.fontScale);
     this.setVariable("--tweaksy-line-height", patch.lineHeight);
     this.setVariable("--tweaksy-letter-spacing", patch.letterSpacingEm, "em");

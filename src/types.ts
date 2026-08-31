@@ -63,6 +63,8 @@ export interface AdaptationPatch {
   themePreset: ThemePreset;
   colorScheme: ColorScheme;
   contrast: ContrastMode;
+  hideDemoAds: boolean;
+  deemphasizeImages: boolean;
   reduceMotion: boolean;
   strongFocus: boolean;
   hideSponsoredContent: boolean;
@@ -86,6 +88,8 @@ export const ADAPTATION_FIELDS = [
   "themePreset",
   "colorScheme",
   "contrast",
+  "hideDemoAds",
+  "deemphasizeImages",
   "reduceMotion",
   "strongFocus",
   "hideSponsoredContent",
@@ -210,6 +214,8 @@ export const DEFAULT_PATCH: AdaptationPatch = {
   themePreset: "unchanged",
   colorScheme: "unchanged",
   contrast: "unchanged",
+  hideDemoAds: false,
+  deemphasizeImages: false,
   reduceMotion: false,
   strongFocus: false,
   hideSponsoredContent: false,
@@ -233,6 +239,8 @@ export function hasAdaptationChanges(patch: AdaptationPatch): boolean {
     || patch.themePreset !== "unchanged"
     || patch.colorScheme !== "unchanged"
     || patch.contrast !== "unchanged"
+    || patch.hideDemoAds
+    || patch.deemphasizeImages
     || patch.reduceMotion
     || patch.strongFocus
     || patch.hideSponsoredContent

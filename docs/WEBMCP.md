@@ -21,7 +21,7 @@ ChatGPT's external conversation is the only agent surface. WebMCP tools invoke t
 | `preview_tweaksy_accessibility_mode` | Reversible write | Applies a fixed color-safe, blue-safe, or low-vision preview through the normal adaptation controller. |
 | `read_tweaksy_content` | Audible local action | Extracts owned Harborline content and starts the browser speech engine; no network is used. |
 | `stop_tweaksy_reading` | Restorative local action | Cancels speech started by the page. |
-| `start_tweaksy_focus_session` | Timed reversible write | Starts a 10/25/45 minute countdown and a one-story, reduced-distraction preview. |
+| `start_tweaksy_focus_session` | Timed reversible write | Starts a 10/25/45 minute countdown and a one-story, reduced-distraction preview that hides demo ads and de-emphasizes decorative images. |
 | `end_tweaksy_focus_session` | Restorative write | Ends the timer, restores page chrome, and discards an unchanged focus preview. |
 | `preview_tweaksy_adaptation` | Reversible write | Applies a vetted preview in memory. It never persists and replaces any previous preview. |
 | `discard_tweaksy_preview` | Restorative write | Removes the preview and reapplies the last approved design. |

@@ -99,6 +99,8 @@ if (!window.__MATCH_MY_WEB_SHADOW_HOOK__) {
         : "unchanged",
       colorScheme: input.colorScheme === "dark" || input.colorScheme === "light" ? input.colorScheme : "unchanged",
       contrast: input.contrast === "more" ? "more" : "unchanged",
+      hideDemoAds: input.hideDemoAds === true,
+      deemphasizeImages: input.deemphasizeImages === true,
       reduceMotion: input.reduceMotion === true,
       strongFocus: input.strongFocus === true,
       hideSponsoredContent: input.hideSponsoredContent === true,

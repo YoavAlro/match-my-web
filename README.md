@@ -37,7 +37,7 @@ For the hosted worker artifact, run `npm run build:site`; the Sites-ready output
 | `preview_tweaksy_accessibility_mode` | Preview a vetted color-safe, blue-safe, or low-vision presentation. |
 | `read_tweaksy_content` | Read a page summary, the current story, or all headlines through the browser voice. |
 | `stop_tweaksy_reading` | Stop speech started by Tweaksy. |
-| `start_tweaksy_focus_session` | Start a visible 10, 25, or 45 minute one-story focus session. |
+| `start_tweaksy_focus_session` | Start a visible 10, 25, or 45 minute one-story focus session, hiding demo ads and de-emphasizing decorative images. |
 | `end_tweaksy_focus_session` | End focus time and cleanly restore the prior surface. |
 | `preview_tweaksy_adaptation` | Apply a reversible, memory-only adaptation from vetted design fields. |
 | `discard_tweaksy_preview` | Restore the last approved design without deleting it. |

@@ -41,6 +41,8 @@ export const previewAdaptationInputSchema = {
         themePreset: { type: "string", enum: ["unchanged", "warm-hospitality", "clean-minimal", "bold-dark", "paper-editorial"] },
         colorScheme: { type: "string", enum: ["unchanged", "light", "dark"] },
         contrast: { type: "string", enum: ["unchanged", "more"] },
+        hideDemoAds: { type: "boolean", description: "Hide the clearly marked Harborline demo advertisements." },
+        deemphasizeImages: { type: "boolean", description: "Reduce saturation and visual weight of decorative story artwork." },
         reduceMotion: { type: "boolean" },
         strongFocus: { type: "boolean" },
       },
@@ -66,6 +68,8 @@ export const previewAdaptationInputSchema = {
           "themePreset",
           "colorScheme",
           "contrast",
+          "hideDemoAds",
+          "deemphasizeImages",
           "reduceMotion",
           "strongFocus",
         ],
@@ -204,7 +208,7 @@ export function createTweaksyWebMcpTools(
     },
     {
       name: "start_tweaksy_focus_session",
-      description: "Start a real 10, 25, or 45 minute focus session on Harborline. This creates a reversible one-story reading preview, reduces nonessential page chrome and motion, strengthens focus, and starts a visible countdown. It replaces any current unsaved preview but never saves automatically. Call get_tweaksy_state first and pass its revision.",
+      description: "Start a real 10, 25, or 45 minute focus session on Harborline. This creates a reversible one-story reading preview, hides the clearly marked demo ads, de-emphasizes decorative images, reduces nonessential page chrome and motion, strengthens focus, and starts a visible countdown. It replaces any current unsaved preview but never saves automatically. Call get_tweaksy_state first and pass its revision.",
       inputSchema: {
         type: "object",
         properties: {
@@ -247,7 +251,7 @@ export function createTweaksyWebMcpTools(
     },
     {
       name: "preview_tweaksy_adaptation",
-      description: "Apply a reversible visual preview to the Harborline demo using only vetted design fields. This changes the visible demo in memory and replaces any current preview, but never saves without approval. Call get_tweaksy_state first and pass its revision.",
+      description: "Apply a reversible visual preview to the Harborline demo using only vetted design fields, including readable type, contrast, color-vision handling, focus settings, hiding clearly marked demo ads, and de-emphasizing decorative images. This changes the visible demo in memory and replaces any current preview, but never saves without approval. Call get_tweaksy_state first and pass its revision.",
       inputSchema: previewAdaptationInputSchema,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       execute: async (rawInput) => {

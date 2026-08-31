@@ -347,6 +347,42 @@ button:focus-visible,
   text-align: right;
 }
 
+.demo-ad {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin: 1.5rem 0 2rem;
+  padding: 1.25rem 1.4rem;
+  border: 0.12rem dashed var(--muted);
+  background: color-mix(in srgb, var(--accent) 8%, var(--paper));
+}
+
+.demo-ad h2 {
+  max-width: 30rem;
+  margin: 0.2rem 0 0.45rem;
+  font-size: clamp(1.2rem, 2.8vw, 1.75rem);
+}
+
+.demo-ad p:not(.eyebrow) {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--muted);
+}
+
+.demo-ad a {
+  flex: 0 0 auto;
+}
+
+[data-tweaksy-demo][data-demo-ads="hidden"] .demo-ad {
+  display: none;
+}
+
+[data-tweaksy-demo][data-deemphasize-images="true"] .story-art {
+  filter: saturate(0.35) contrast(0.95);
+  opacity: 0.62;
+}
+
 .story-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -1265,7 +1301,8 @@ button:focus-visible,
   }
 
   .section-heading,
-  .journal-footer {
+  .journal-footer,
+  .demo-ad {
     align-items: start;
     flex-direction: column;
   }

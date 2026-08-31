@@ -29,6 +29,7 @@ export function inspectTweaksySurface(root: HTMLElement): TweaksySurfaceInventor
       "constrain the reading width",
       "present stories as a keyboard-operable deck",
       "reduce motion and strengthen focus indicators",
+      "hide clearly marked demo ads and de-emphasize decorative images for focus",
       "apply vetted color and editorial themes",
     ],
     assistiveCapabilities: [

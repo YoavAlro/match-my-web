@@ -21,6 +21,8 @@ export const SAFE_ADAPTATION_FIELDS = [
   "themePreset",
   "colorScheme",
   "contrast",
+  "hideDemoAds",
+  "deemphasizeImages",
   "reduceMotion",
   "strongFocus",
 ] as const satisfies readonly AdaptationField[];
@@ -170,6 +172,11 @@ export function parseSafeAdaptationChanges(input: unknown): Record<string, unkno
       case "themePreset": parsed[field] = requireEnum(raw, field, ["unchanged", "warm-hospitality", "clean-minimal", "bold-dark", "paper-editorial"]); break;
       case "colorScheme": parsed[field] = requireEnum(raw, field, ["unchanged", "light", "dark"]); break;
       case "contrast": parsed[field] = requireEnum(raw, field, ["unchanged", "more"]); break;
+      case "hideDemoAds":
+      case "deemphasizeImages":
+        if (typeof raw !== "boolean") throw new Error(`${field} must be a boolean.`);
+        parsed[field] = raw;
+        break;
       case "reduceMotion":
       case "strongFocus":
         if (typeof raw !== "boolean") throw new Error(`${field} must be a boolean.`);

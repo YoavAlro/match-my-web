@@ -121,6 +121,8 @@ export function validatePatch(input: unknown): AdaptationPatch {
       : "unchanged",
     colorScheme: value.colorScheme === "light" || value.colorScheme === "dark" ? value.colorScheme : "unchanged",
     contrast: value.contrast === "more" ? "more" : "unchanged",
+    hideDemoAds: value.hideDemoAds === true,
+    deemphasizeImages: value.deemphasizeImages === true,
     reduceMotion: value.reduceMotion === true,
     strongFocus: value.strongFocus === true,
     hideSponsoredContent: value.hideSponsoredContent === true,

@@ -65,6 +65,8 @@ const FOCUS_PRESET = {
   deckLinkPosition: "footer",
   themePreset: "paper-editorial",
   colorScheme: "light",
+  hideDemoAds: true,
+  deemphasizeImages: true,
   reduceMotion: true,
   strongFocus: true,
 } as const;

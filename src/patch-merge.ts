@@ -52,6 +52,8 @@ export function mergeAdaptationPatches(basePatch: AdaptationPatch | null, delta:
     themePreset: enumValue("themePreset", "unchanged"),
     colorScheme: enumValue("colorScheme", "unchanged"),
     contrast: enumValue("contrast", "unchanged"),
+    hideDemoAds: reset.has("hideDemoAds") ? false : delta.hideDemoAds === true || base.hideDemoAds === true,
+    deemphasizeImages: reset.has("deemphasizeImages") ? false : delta.deemphasizeImages === true || base.deemphasizeImages === true,
     reduceMotion: reset.has("reduceMotion") ? false : delta.reduceMotion || base.reduceMotion,
     strongFocus: reset.has("strongFocus") ? false : delta.strongFocus || base.strongFocus,
     hideSponsoredContent: reset.has("hideSponsoredContent") ? false : delta.hideSponsoredContent === true || base.hideSponsoredContent === true,

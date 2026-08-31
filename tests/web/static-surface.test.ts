@@ -14,25 +14,26 @@ describe("Harborline static surface", () => {
     expect(storyHrefs.every((href) => targetIds.has(href))).toBe(true);
   });
 
-  it("keeps Tweaksy controls reachable before traversing the full page", async () => {
+  it("keeps the publication itself as the complete visible surface", async () => {
     const html = await readFile(path.resolve("web/index.html"), "utf8");
-    expect(html).toContain('href="#tweaksy-controls">Skip to Tweaksy controls</a>');
-    expect(html).toContain('id="tweaksy-controls"');
+    expect(html).toContain('data-tweaksy-demo');
+    expect(html).toContain("Harborline Journal");
+    expect(html).not.toContain('id="tweaksy-controls"');
+    expect(html).not.toContain("tweaksy-dock");
   });
 
-  it("shows a real free-form chat composer in the public dock", async () => {
+  it("leaves ChatGPT as the only agent conversation surface", async () => {
     const html = await readFile(path.resolve("web/index.html"), "utf8");
-    expect(html).toContain('data-chat-form');
-    expect(html).toContain('data-chat-input');
-    expect(html).toContain('data-chat-log');
-    expect(html).toContain('Free-form demo');
+    expect(html).not.toContain("data-chat-form");
+    expect(html).not.toContain("data-chat-input");
+    expect(html).not.toContain("data-assistive-mode");
+    expect(html).not.toContain("data-preview-hero");
   });
 
-  it("offers color-safe, read-aloud, and timed focus controls", async () => {
+  it("keeps the source page free of Tweaksy branding", async () => {
     const html = await readFile(path.resolve("web/index.html"), "utf8");
-    expect(html).toContain('data-assistive-mode="color-safe"');
-    expect(html).toContain('data-assistive-mode="read-aloud"');
-    expect(html).toContain('data-assistive-mode="focus"');
-    expect(html).toContain("not a replacement for a screen reader");
+    expect(html).not.toContain("Tweaksy Live");
+    expect(html).not.toContain("Talk to Tweaksy");
+    expect(html).not.toContain("Download Chrome demo");
   });
 });

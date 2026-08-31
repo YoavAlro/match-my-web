@@ -161,7 +161,7 @@ export function createTweaksyWebMcpTools(
           preview: snapshot.preview,
           verification: snapshot.verification,
           persisted: false,
-          nextStep: "Ask the person to inspect the visible preview, then use the dock to approve or discard it.",
+          nextStep: "Ask the person to inspect the visible page in ChatGPT, then call approve_tweaksy_preview or discard_tweaksy_preview only after they explicitly choose.",
         };
       },
     },
@@ -188,7 +188,7 @@ export function createTweaksyWebMcpTools(
           status: "reading_started",
           reading: state.reading,
           networkUsed: false,
-          nextStep: "The person can stop speech from the Tweaksy dock or with stop_tweaksy_reading.",
+          nextStep: "The person can ask ChatGPT to call stop_tweaksy_reading at any time.",
         };
       },
     },
@@ -267,7 +267,7 @@ export function createTweaksyWebMcpTools(
           verification: snapshot.verification,
           effectiveDesign: snapshot.effectivePatch,
           persisted: false,
-          nextStep: "Let the person inspect the visible preview. They can approve or discard it in the Tweaksy dock.",
+          nextStep: "Let the person inspect the visible page in ChatGPT. They can ask you to approve or discard the preview through WebMCP.",
         };
       },
     },

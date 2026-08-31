@@ -6,11 +6,11 @@ Tweaksy is a privacy-first Manifest V3 Chrome extension that lets a person descr
 
 ## Tweaksy Live — WebMCP Challenge
 
-Tweaksy now demonstrates the same adaptation model in two places. **Real-site mode** uses the Chrome extension on a permitted top-level website: the person describes the desired layout in free-form chat, Tweaksy creates a bounded preview, and the extension registers four safe WebMCP tools so an agent can inspect, preview, and undo on that real page. Permanent approval stays human-only in the side panel. **Tweaksy Live** is the no-install challenge experience: a fictional six-story Harborline Journal page with free-form local chat, a persistent approval dock, and ten first-party WebMCP tools.
+Tweaksy now demonstrates the same adaptation model in two places. **Real-site mode** uses the Chrome extension on a permitted top-level website: the person describes the desired layout in free-form chat, Tweaksy creates a bounded preview, and the extension registers four safe WebMCP tools so an agent can inspect, preview, and undo on that real page. Permanent approval stays human-only in the side panel. **Tweaksy Live** is the no-install challenge experience: a clean, fictional six-story Harborline Journal page with no embedded Tweaksy controls and ten first-party WebMCP tools. ChatGPT is the conversation surface; WebMCP is the page's control bridge.
 
 Live demo: [tweaksy-live.yoavalro.chatgpt.site](https://tweaksy-live.yoavalro.chatgpt.site/)
 
-The strongest product demo combines the product and the first-party website: ask Tweaksy to adapt Harborline for color blindness or low vision, read owned page content aloud, or start a timed focus session. The same capability runs from the visible chat/buttons and from WebMCP, so an agent and a person share one visible, reversible state. Read aloud is an optional browser aid, not a replacement for a screen reader or individualized accessibility testing.
+The strongest product demo uses ChatGPT's conversation to ask the first-party Harborline website to adapt for color blindness or low vision, read owned page content aloud, or start a timed focus session. WebMCP changes the actual page in front of the person and returns state and verification to the agent. Read aloud is an optional browser aid, not a replacement for a screen reader or individualized accessibility testing.
 
 ### Run the web experience
 
@@ -24,7 +24,7 @@ node scripts/serve-web.mjs
 
 Open `http://127.0.0.1:4173/`. If that port is occupied, run `node scripts/serve-web.mjs --port=4319` and open the matching URL.
 
-The human controls work in any modern browser. To discover the tools, use ChatGPT’s built-in browser or a compatible WebMCP-enabled Chrome build.
+The Harborline publication remains readable in any modern browser. To discover and invoke its adaptation tools, use ChatGPT’s built-in browser or a compatible WebMCP-enabled Chrome build.
 
 For the hosted worker artifact, run `npm run build:site`; the Sites-ready output is written to `dist/`.
 
@@ -81,11 +81,11 @@ The Chrome extension is Tweaksy’s real-site product surface. It supports optio
 - Includes a packaged, reversible filter for sponsored feed items, including rendered/accessibility labels, localized or split-letter markers, and standard attribution metadata; providers can enable it but cannot supply executable filtering code.
 - Includes a separate packaged, reversible filter for feed posts containing actual video elements.
 - For unfamiliar feed filtering, sends bounded observed DOM marker and structure signals to the configured provider; the provider may select only exact observed evidence, and Tweaksy executes it through a validated site-agnostic rule engine.
-- Remembers at most 12 chat turns per browser tab in session storage, keeps in-flight generation bound to its originating tab while the user browses elsewhere, and restores its thinking or completed proposal state on return.
+- Remembers at most 12 extension chat turns per browser tab in session storage, keeps in-flight generation bound to its originating tab while the user browses elsewhere, and restores its thinking or completed proposal state on return.
 - Uses the toolbar popup as a fast off switch: disable only the current origin or shut Tweaksy down everywhere, immediately clear active adaptations, and show the off state with a grayscale toolbar icon. Re-enabling restores eligible saved profiles.
 - Supports deterministic headline colors, a full-page article deck with touch swiping, mouse dragging, keyboard navigation, optional side controls, and reversible red-to-blue/teal interface-color remapping.
 - Recognizes visible social-feed posts for swipe decks, preserving author, text, and visible image/video media without a generic article button; post details open in a local accessible dialog with a link to the original conversation.
-- Keeps preview, measured application results, approval, and undo controls inside the chat instead of claiming an unverified action succeeded.
+- Keeps preview, measured application results, approval, and undo state in the WebMCP response instead of claiming an unverified action succeeded; the page itself stays free of a second control surface.
 - Registers read, preview, and discard WebMCP tools in the real page’s top-level JavaScript context; the isolated extension world validates every request and never exposes approval, storage, permissions, or provider calls through the page bridge.
 - Provides an explicit, key-free JSON diagnostic export that can be saved into the project workspace for debugging.
 - Shares approved profiles as versioned `.tweaksy.json` files through the system share sheet or a file-save fallback. Recipients must open the matching origin, import, preview, and explicitly approve the validated declarative patch. Legacy `.matchmyweb.json` files remain importable.
@@ -153,7 +153,7 @@ These providers use their documented OpenAI-compatible chat-completions endpoint
 - `src/validation.ts` — the AI-output safety boundary.
 - `src/sidepanel.ts` — accessible chat, approval, and voice workflow.
 - `src/web/adaptation-controller.ts` — shared revision, preview, approval, discard, and restore state machine for Tweaksy Live.
-- `src/web/assistive-controller.ts` — shared color-safe, low-vision, browser read-aloud, and timed-focus capabilities used by chat, buttons, and WebMCP.
+- `src/web/assistive-controller.ts` — shared color-safe, low-vision, browser read-aloud, and timed-focus capabilities used by WebMCP.
 - `src/web/demo-renderer.ts` — renderer scoped to the fictional Harborline surface.
 - `src/web/webmcp.ts` — top-level WebMCP schemas, tools, execution, and feature detection.
 - `web/` — static Tweaksy Live document, styles, and original social preview.

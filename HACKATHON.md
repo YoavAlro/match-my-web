@@ -31,14 +31,14 @@ That baseline includes extension-specific provider integrations, content-script 
 Development began on August 28, 2026 on the `webmcp-challenge` branch. The meaningful WebMCP extension consists of:
 
 - A standalone, static Tweaksy Live app with the original fictional Harborline Journal surface.
-- A visible free-form chat in the public dock that locally interprets natural-language layout requests into the same closed adaptation vocabulary, with example prompts and refinement support.
-- Three meaningful assistive workflows shared by the chat, visible controls, and WebMCP: color-safe/low-vision presentation, browser read-aloud for owned Harborline content, and a real timed focus session.
+- A clean first-party Harborline publication surface with no embedded agent chat or Tweaksy controls: ChatGPT is the conversation and WebMCP is the page's control bridge.
+- Three meaningful assistive workflows exposed through WebMCP: color-safe/low-vision presentation, browser read-aloud for owned Harborline content, and a real timed focus session.
 - A scoped renderer that can convert a dense six-story feed into an accessible, keyboard-operable story deck without removing any story or link.
-- One revision-safe adaptation controller shared by the visible dock and WebMCP tools.
+- One revision-safe adaptation controller shared by every WebMCP adaptation tool.
 - In-memory previews, explicit approval, discard, locally persisted approved designs, and restore-original behavior.
 - Ten top-level JavaScript WebMCP tools registered with `document.modelContext.registerTool`, including semantic accessibility, read-aloud, and focus-session tools.
 - A four-tool real-page WebMCP surface injected by the Chrome extension after explicit page activation, reusing the existing arbitrary-page renderer while keeping persistence and provider access human-controlled.
-- Free-form side-panel chat for describing real-page adaptations in natural language; the agent output is normalized into the same declarative patch model.
+- Free-form side-panel chat for describing real-page adaptations in natural language; the agent output is normalized into the same declarative patch model. The hosted demo intentionally keeps ChatGPT's external conversation as the agent surface rather than duplicating it inside the page.
 - Strict, closed input schemas that expose vetted visual settings only—not CSS, HTML, JavaScript, URLs, selectors, arbitrary content edits, or network access.
 - Verification results that report story/link preservation after every change.
 - Automated tests for input safety, stale-revision rejection, preview/approve/discard state transitions, registration, and non-WebMCP fallback.

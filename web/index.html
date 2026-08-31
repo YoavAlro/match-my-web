@@ -5,22 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Tweaksy Live demonstrates transparent, reversible website adaptations through WebMCP."
+      content="Harborline Journal is a six-story publication that exposes site-native accessibility capabilities through WebMCP."
     />
     <meta name="theme-color" content="#f7f2e8" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Tweaksy Live" />
-    <meta property="og:description" content="Make this page fit you—with transparent, reversible WebMCP adaptations." />
+    <meta property="og:title" content="Harborline Journal" />
+    <meta property="og:description" content="A living publication that exposes site-native accessibility capabilities through WebMCP." />
     <meta property="og:image" content="./assets/tweaksy-live-social.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <title>Tweaksy Live — make this page fit you</title>
+    <title>Harborline Journal — evening edition</title>
     <link rel="stylesheet" href="./app.css" />
     <script type="module" src="./app.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#stories">Skip to the stories</a>
-    <a class="skip-link skip-link-controls" href="#tweaksy-controls">Skip to Tweaksy controls</a>
-
     <main id="demo-surface" class="journal" data-tweaksy-demo>
       <header class="journal-header">
         <div class="utility-row">
@@ -194,135 +192,10 @@
         </section>
       </section>
 
-      <section class="real-site-mode" aria-labelledby="real-site-title">
-        <div>
-          <p class="eyebrow">Real-site mode</p>
-          <h2 id="real-site-title">Talk to Tweaksy on the page you actually use.</h2>
-          <p>
-            Harborline is the no-install demo. The Chrome extension works on a permitted top-level website:
-            open Tweaksy, describe the layout you want in free-form text, and review the result on the real page.
-          </p>
-        </div>
-        <ol aria-label="Use Tweaksy on a real website">
-          <li><span>1</span> Open a website</li>
-          <li><span>2</span> Chat naturally</li>
-          <li><span>3</span> Preview, then approve</li>
-        </ol>
-        <div class="real-site-actions">
-          <a class="real-site-link" href="https://github.com/YoavAlro/match-my-web/releases/download/v0.13.0/tweaksy-0.13.0-chrome.zip">
-            Download Chrome demo <span aria-hidden="true">↓</span>
-          </a>
-          <small>Unzip, then choose “Load unpacked” in <code>chrome://extensions</code>.</small>
-          <a class="real-site-source" href="https://github.com/YoavAlro/match-my-web/tree/webmcp-challenge" target="_blank" rel="noreferrer">View source <span aria-hidden="true">↗</span></a>
-        </div>
-      </section>
-
       <footer class="journal-footer">
-        <p>Harborline Journal is a fictional publication built to demonstrate Tweaksy safely.</p>
+        <p>Harborline Journal is a fictional publication built to demonstrate site-native WebMCP accessibility capabilities.</p>
         <p>© <span data-current-year>2026</span> Harborline Studio</p>
       </footer>
     </main>
-
-    <aside id="tweaksy-controls" class="tweaksy-dock" aria-labelledby="tweaksy-title" tabindex="-1">
-      <header class="dock-header">
-        <img src="./assets/tweaksy-mark.svg" alt="" width="46" height="46" />
-        <div>
-          <p class="dock-kicker">Tweaksy Live</p>
-          <h2 id="tweaksy-title">Make this page fit you.</h2>
-        </div>
-        <span class="connection-dot" data-connection-dot role="status" title="Ready" aria-label="Tweaksy is ready"></span>
-      </header>
-
-      <div class="dock-body">
-        <section class="chat-panel" aria-labelledby="chat-title">
-          <div class="chat-panel-heading">
-            <p id="chat-title" class="dock-label">Talk to Tweaksy</p>
-            <span>Free-form demo</span>
-          </div>
-          <div class="chat-log" data-chat-log role="log" aria-live="polite" aria-relevant="additions">
-            <div class="chat-bubble chat-bubble-assistant">
-              Tell me what would help. Try “I’m color blind,” “read this page to me,” or “help me focus for 25 minutes.”
-            </div>
-          </div>
-          <div class="chat-suggestions" aria-label="Example requests">
-            <button type="button" data-chat-suggestion="I’m color blind. Avoid red-only cues.">Color safe</button>
-            <button type="button" data-chat-suggestion="Read this page to me">Read aloud</button>
-            <button type="button" data-chat-suggestion="Help me focus for 25 minutes">Focus time</button>
-          </div>
-          <form class="chat-composer" data-chat-form>
-            <label class="visually-hidden" for="tweaksy-chat-input">Describe how this page should change</label>
-            <textarea id="tweaksy-chat-input" data-chat-input rows="2" maxlength="400" placeholder="Describe the result you want…" required></textarea>
-            <button type="submit" data-chat-send>Preview</button>
-          </form>
-          <p class="chat-note">No account or key. This local demo understands Tweaksy’s safe layout vocabulary; the extension brings the same conversation to permitted websites.</p>
-        </section>
-
-        <section class="assistive-modes" aria-labelledby="assistive-title">
-          <div class="assistive-heading">
-            <p id="assistive-title" class="dock-label">Assistive modes</p>
-            <span data-assistive-status>Ready</span>
-          </div>
-          <div class="assistive-actions">
-            <button type="button" data-assistive-mode="color-safe">
-              <span aria-hidden="true">◐</span>
-              <strong>Color safe</strong>
-              <small>No red-only cues</small>
-            </button>
-            <button type="button" data-assistive-mode="read-aloud">
-              <span aria-hidden="true">◖))</span>
-              <strong data-read-label>Read aloud</strong>
-              <small>Browser voice</small>
-            </button>
-            <button type="button" data-assistive-mode="focus">
-              <span aria-hidden="true">◷</span>
-              <strong data-focus-label>Focus 25</strong>
-              <small data-focus-detail>One calm story</small>
-            </button>
-          </div>
-          <p class="assistive-note">Read aloud is a browser aid, not a replacement for a screen reader.</p>
-        </section>
-
-        <section class="quick-start" aria-labelledby="quick-start-title">
-          <p id="quick-start-title" class="dock-label">Or use the one-click example</p>
-          <button class="adapt-button" type="button" data-preview-hero disabled>
-            <span>One story at a time</span>
-            <small>Larger type · less motion · strong focus</small>
-          </button>
-        </section>
-
-        <section class="decision-card" data-decision-card aria-labelledby="decision-title" hidden>
-          <div class="decision-heading">
-            <p class="dock-label" data-decision-kind>Preview</p>
-            <span data-decision-source>From Tweaksy</span>
-          </div>
-          <h3 id="decision-title" data-decision-summary>One story at a time</h3>
-          <ul data-decision-details></ul>
-          <div class="decision-actions" data-preview-actions>
-            <button class="primary-action" type="button" data-approve-preview>Approve</button>
-            <button type="button" data-discard-preview>Discard</button>
-          </div>
-          <button class="restore-action" type="button" data-restore-original hidden>Restore original page</button>
-        </section>
-
-        <section class="proof-card" aria-labelledby="proof-title">
-          <div class="proof-heading">
-            <p id="proof-title" class="dock-label">Page proof</p>
-            <span data-proof-status>Original intact</span>
-          </div>
-          <dl>
-            <div><dt>Stories</dt><dd data-proof-stories>6 of 6</dd></div>
-            <div><dt>Links</dt><dd data-proof-links>6 of 6</dd></div>
-            <div><dt>Saved</dt><dd data-proof-saved>Nothing yet</dd></div>
-          </dl>
-        </section>
-
-        <p class="dock-status" data-dock-status role="status">Preparing the adaptation controls…</p>
-      </div>
-
-      <footer class="dock-footer">
-        <span data-webmcp-status>No account or API key</span>
-        <a href="https://github.com/YoavAlro/match-my-web" target="_blank" rel="noreferrer">Source</a>
-      </footer>
-    </aside>
   </body>
 </html>

@@ -4,13 +4,13 @@ Tweaksy uses WebMCP in two complementary modes. The hosted Harborline surface is
 
 ## Product loop
 
-1. A person opens the fictional Harborline Journal page and sees the same six stories the agent can inspect.
+1. A person opens the fictional Harborline Journal page and sees the same six stories the agent can inspect; the page contains no duplicate Tweaksy chat or control dock.
 2. The agent calls a read tool to inspect capabilities and the current revision.
 3. The agent proposes a vetted visual adaptation or invokes a semantic assistive capability: color-safe/low-vision preview, browser read-aloud, or timed focus.
-4. The person reviews the actual page and either approves or discards the preview in the persistent dock.
+4. The person reviews the actual page in ChatGPT and explicitly asks the agent to approve or discard the preview through WebMCP.
 5. Approval stores only the validated declarative patch in local storage for this origin. Restore removes it.
 
-The free-form chat, assistive-mode buttons, and WebMCP tools invoke the same adaptation and assistive controllers. There is no parallel agent-only state path.
+ChatGPT's external conversation is the only agent surface. WebMCP tools invoke the page's adaptation and assistive controllers directly, while the page remains a clean publication surface and the person retains consent by explicitly directing the agent to approve, discard, restore, or stop an action.
 
 ## Tool surface
 
@@ -27,7 +27,7 @@ The free-form chat, assistive-mode buttons, and WebMCP tools invoke the same ada
 | `discard_tweaksy_preview` | Restorative write | Removes the preview and reapplies the last approved design. |
 | `approve_tweaksy_preview` | Local persistent write | Saves the exact current preview to this origin’s browser storage. Its description requires an explicit approval request. |
 
-Tools are registered in top-level page JavaScript after feature detection. Browsers without WebMCP retain the complete human workflow.
+Tools are registered in top-level page JavaScript after feature detection. Browsers without WebMCP retain the complete readable publication, but agent-driven adaptations require a WebMCP-capable browser.
 
 Read aloud deliberately operates only on the fictional first-party Harborline content. It is presented as a browser reading aid, not as a replacement for a screen reader, semantic HTML, or accessibility testing. Focus mode hides only nonessential Harborline chrome with a scoped data attribute; it does not delete content.
 
@@ -60,7 +60,7 @@ Preview state is memory-only. Approved state is local-only. No account, backend,
 
 `HarborlineRenderer` receives only a normalized `AdaptationPatch`. It writes data attributes and CSS custom properties on `[data-tweaksy-demo]`, never on arbitrary page selectors. In story-deck mode, inactive stories remain connected to the document and are restored as the user navigates; total story and link counts are verified after every controller mutation.
 
-The Tweaksy dock sits outside the adapted surface. This keeps approval controls stable even when the demonstration page changes theme, layout, typography, focus, or motion behavior.
+The hosted page has no companion dock. The agent receives the revision, preview identity, state, and verification through WebMCP, and the person keeps control by explicitly directing the ChatGPT conversation to approve, discard, restore, or stop an action.
 
 ## Verification
 
@@ -70,6 +70,6 @@ Run the complete local gate:
 npm run check
 ```
 
-The WebMCP-specific tests cover hosted controller state transitions, assistive chat routing, semantic mode execution, timed-focus cleanup, persistence, rollback, stale revisions, unsafe fields, schema closure, top-level registration, real-page bridge validation, the no-persistence extension boundary, shared execution, and unsupported-browser fallback.
+The WebMCP-specific tests cover hosted controller state transitions, semantic mode execution, timed-focus cleanup, persistence, rollback, stale revisions, unsafe fields, schema closure, top-level registration, real-page bridge validation, the no-persistence extension boundary, shared execution, manual fallback controls, and unsupported-browser fallback.
 
-The implementation follows OpenAI’s [Site tools guide](https://learn.chatgpt.com/docs/webmcp): narrow inputs, explicit side effects, verifiable results, existing application permissions, and preserved human controls.
+The implementation follows OpenAI’s [Site tools guide](https://learn.chatgpt.com/docs/webmcp): narrow inputs, explicit side effects, verifiable results, existing application permissions, and preserved user control.

@@ -14,13 +14,6 @@ export interface SpeechDriver {
   stop(): void;
 }
 
-export type AssistiveChatAction =
-  | { kind: "accessibility-mode"; mode: AccessibilityMode }
-  | { kind: "read"; scope: ReadingScope }
-  | { kind: "stop-reading" }
-  | { kind: "start-focus"; minutes: 10 | 25 | 45 }
-  | { kind: "end-focus" };
-
 class BrowserSpeechDriver implements SpeechDriver {
   available(): boolean {
     return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -103,23 +96,6 @@ export function extractHarborlineReading(root: HTMLElement, scope: ReadingScope)
   const title = elementText(root, "#page-title");
   const description = elementText(root, ".lead-in .dek");
   return `Harborline Journal. ${title}. ${description} There are ${headlines.length} stories. ${headlines.join(". ")}.`;
-}
-
-export function interpretAssistiveChatAction(request: string): AssistiveChatAction | null {
-  const lower = request.trim().toLowerCase();
-  if (!lower) return null;
-  if (/\b(?:stop|cancel|pause)\b[^.]{0,25}\b(?:reading|speaking|voice|read aloud)\b/.test(lower)) return { kind: "stop-reading" };
-  if (/\b(?:end|stop|cancel|leave|exit)\b[^.]{0,25}\bfocus(?: mode| session)?\b/.test(lower)) return { kind: "end-focus" };
-  if (/\b(?:read|speak|say)\b[^.]{0,40}\b(?:current|this)\s+(?:story|article)\b/.test(lower)) return { kind: "read", scope: "current-story" };
-  if (/\b(?:read|speak|say)\b[^.]{0,35}\b(?:headlines|titles)\b/.test(lower)) return { kind: "read", scope: "all-headlines" };
-  if (/\b(?:low vision|partially sighted|visual impairment)\b/.test(lower)) return { kind: "accessibility-mode", mode: "low-vision" };
-  if (/\b(?:read|speak|say)\b[^.]{0,40}\b(?:this|the)\s+(?:page|site|content)\b|\bread aloud\b|\bread (?:it )?to me\b|\bi(?: am|'m) blind\b|\bblind user\b/.test(lower)) return { kind: "read", scope: "page-summary" };
-  if (/\b(?:focus(?: time| mode| session)?|help me focus|distraction[- ]free)\b/.test(lower)) {
-    const requested = Number(lower.match(/\b(10|25|45)\s*(?:minute|min)/)?.[1] ?? 25);
-    return { kind: "start-focus", minutes: requested as 10 | 25 | 45 };
-  }
-  if (/\b(?:colou?r ?blind|avoid red|red[ -]green|color safe|colour safe)\b/.test(lower)) return { kind: "accessibility-mode", mode: "color-safe" };
-  return null;
 }
 
 export class AssistiveController {

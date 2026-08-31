@@ -33,7 +33,7 @@ export function inspectTweaksySurface(root: HTMLElement): TweaksySurfaceInventor
       "apply vetted color and editorial themes",
     ],
     assistiveCapabilities: [
-      "preview a color-safe, blue-safe, or low-vision presentation",
+      "preview ten accessibility modes for color vision, low vision, reading comfort, motion, focus, and keyboard access",
       "read a page summary, current story, or all headlines aloud through the browser",
       "start or end a visible 10, 25, or 45 minute focus session",
     ],

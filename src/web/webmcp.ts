@@ -143,11 +143,11 @@ export function createTweaksyWebMcpTools(
     },
     {
       name: "preview_tweaksy_accessibility_mode",
-      description: "Preview one vetted accessibility preset on Harborline: color-safe removes red-only cues, blue-safe avoids blue-dependent presentation, and low-vision enlarges type, shortens lines, strengthens focus, and reduces motion. The preview is visible and reversible but not saved. Call get_tweaksy_state first and pass its revision.",
+      description: "Preview one of ten vetted accessibility modes on Harborline: color-safe, blue-safe, low-vision, large-text, dyslexia-friendly, reduced-motion, high-contrast, image-free, cognitive-load, or keyboard-access. The preview is visible and reversible but not saved. Call get_tweaksy_state first and pass its revision.",
       inputSchema: {
         type: "object",
         properties: {
-          mode: { type: "string", enum: ["color-safe", "blue-safe", "low-vision"] },
+          mode: { type: "string", enum: ["color-safe", "blue-safe", "low-vision", "large-text", "dyslexia-friendly", "reduced-motion", "high-contrast", "image-free", "cognitive-load", "keyboard-access"] },
           expectedRevision: expectedRevisionProperty,
         },
         required: ["mode", "expectedRevision"],
@@ -156,7 +156,8 @@ export function createTweaksyWebMcpTools(
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       execute: async (rawInput) => {
         const input = parseClosedInput(rawInput, "preview_tweaksy_accessibility_mode", ["mode", "expectedRevision"]);
-        if (input.mode !== "color-safe" && input.mode !== "blue-safe" && input.mode !== "low-vision") throw new Error("mode must be color-safe, blue-safe, or low-vision.");
+        const modes: AccessibilityMode[] = ["color-safe", "blue-safe", "low-vision", "large-text", "dyslexia-friendly", "reduced-motion", "high-contrast", "image-free", "cognitive-load", "keyboard-access"];
+        if (!modes.includes(input.mode as AccessibilityMode)) throw new Error(`mode must be one of: ${modes.join(", ")}.`);
         const snapshot = assistive.previewAccessibilityMode(input.mode as AccessibilityMode, input.expectedRevision as number, "webmcp");
         return {
           status: "accessibility_preview_ready",

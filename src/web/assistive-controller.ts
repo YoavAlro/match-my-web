@@ -1,6 +1,16 @@
 import type { PreviewSource, AdaptationController, AdaptationSnapshot } from "./adaptation-controller";
 
-export type AccessibilityMode = "color-safe" | "blue-safe" | "low-vision";
+export type AccessibilityMode =
+  | "color-safe"
+  | "blue-safe"
+  | "low-vision"
+  | "large-text"
+  | "dyslexia-friendly"
+  | "reduced-motion"
+  | "high-contrast"
+  | "image-free"
+  | "cognitive-load"
+  | "keyboard-access";
 export type ReadingScope = "page-summary" | "current-story" | "all-headlines";
 
 export interface AssistiveSnapshot {
@@ -52,6 +62,34 @@ const MODE_PRESETS = {
       strongFocus: true,
       reduceMotion: true,
     },
+  },
+  "large-text": {
+    summary: "Large-text presentation with stronger focus and comfortable line spacing",
+    changes: { fontScale: 1.55, lineHeight: 1.8, contrast: "more", strongFocus: true },
+  },
+  "dyslexia-friendly": {
+    summary: "Dyslexia-friendly reading layout with wider spacing, shorter lines, and less motion",
+    changes: { fontScale: 1.12, lineHeight: 1.9, letterSpacingEm: 0.045, contentMaxWidthRem: 58, reduceMotion: true, strongFocus: true },
+  },
+  "reduced-motion": {
+    summary: "Reduced-motion presentation with stable transitions and clear focus",
+    changes: { reduceMotion: true, strongFocus: true },
+  },
+  "high-contrast": {
+    summary: "High-contrast presentation with stronger borders and focus indicators",
+    changes: { contrast: "more", strongFocus: true },
+  },
+  "image-free": {
+    summary: "Image-free reading presentation that de-emphasizes decorative artwork",
+    changes: { deemphasizeImages: true, reduceMotion: true, strongFocus: true },
+  },
+  "cognitive-load": {
+    summary: "Cognitive-load reduction with fewer distractions, calmer imagery, and readable spacing",
+    changes: { fontScale: 1.1, lineHeight: 1.75, contentMaxWidthRem: 62, hideDemoAds: true, deemphasizeImages: true, reduceMotion: true, strongFocus: true },
+  },
+  "keyboard-access": {
+    summary: "Keyboard-first presentation with a focused story deck and strong visible focus",
+    changes: { articleLayout: "swipe-cards", deckControls: "sides", deckLinkPosition: "footer", reduceMotion: true, strongFocus: true },
   },
 } as const;
 

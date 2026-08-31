@@ -34,7 +34,7 @@ For the hosted worker artifact, run `npm run build:site`; the Sites-ready output
 | --- | --- |
 | `inspect_tweaksy_surface` | Read the page inventory, capabilities, preservation counts, and safety guarantees. |
 | `get_tweaksy_state` | Read the exact revision, approved state, pending preview, and verification result. |
-| `preview_tweaksy_accessibility_mode` | Preview a vetted color-safe, blue-safe, or low-vision presentation. |
+| `preview_tweaksy_accessibility_mode` | Preview one of ten modes: color-safe, blue-safe, low-vision, large-text, dyslexia-friendly, reduced-motion, high-contrast, image-free, cognitive-load, or keyboard-access. |
 | `read_tweaksy_content` | Read a page summary, the current story, or all headlines through the browser voice. |
 | `stop_tweaksy_reading` | Stop speech started by Tweaksy. |
 | `start_tweaksy_focus_session` | Start a visible 10, 25, or 45 minute one-story focus session, hiding demo ads and de-emphasizing decorative images. |

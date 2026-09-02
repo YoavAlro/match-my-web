@@ -104,6 +104,8 @@ function webSafePatch(patch: AdaptationPatch): AdaptationPatch {
     themePreset: normalized.themePreset,
     colorScheme: normalized.colorScheme,
     contrast: normalized.contrast,
+    hideDemoAds: normalized.hideDemoAds,
+    deemphasizeImages: normalized.deemphasizeImages,
     reduceMotion: normalized.reduceMotion,
     strongFocus: normalized.strongFocus,
     headingColor: null,

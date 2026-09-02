@@ -83,6 +83,29 @@ describe("AdaptationController", () => {
     expect(storage.load()).toBeNull();
   });
 
+  it("preserves safe ad-hiding and image-deemphasis changes in a preview", () => {
+    const { controller, renderer } = makeController();
+    const snapshot = controller.previewAdaptation({
+      expectedRevision: 0,
+      summary: "Reduce visual noise for focused reading",
+      changes: {
+        hideDemoAds: true,
+        deemphasizeImages: true,
+        strongFocus: true,
+      },
+    }, "webmcp");
+
+    expect(snapshot.effectivePatch).toMatchObject({
+      hideDemoAds: true,
+      deemphasizeImages: true,
+      strongFocus: true,
+    });
+    expect(renderer.applied.at(-1)).toMatchObject({
+      hideDemoAds: true,
+      deemphasizeImages: true,
+    });
+  });
+
   it("approves only the exact current preview and persists the safe design", () => {
     const { controller, storage } = makeController();
     const preview = controller.previewAdaptation({

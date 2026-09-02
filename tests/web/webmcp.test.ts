@@ -187,6 +187,13 @@ describe("Tweaksy WebMCP tools", () => {
     await expect(focus?.execute({ minutes: 25, expectedRevision: 2 })).resolves.toMatchObject({
       status: "focus_session_started",
       revision: 3,
+      preview: {
+        patch: {
+          hideDemoAds: true,
+          deemphasizeImages: true,
+          strongFocus: true,
+        },
+      },
     });
     expect(root.dataset.focusSession).toBe("true");
     await expect(endFocus?.execute({ expectedRevision: 3 })).resolves.toMatchObject({ status: "focus_session_ended", revision: 4 });
